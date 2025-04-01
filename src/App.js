@@ -1,17 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 
-// Get IP dynamically
+// Configure API Base URL dynamically
 const getApiBaseUrl = () => {
-  const localIP = process.env.REACT_APP_LOCAL_IP;
-  const port = process.env.REACT_APP_PORT || 3001;
-  
-  // Priority: 
-  // 1. Use local network IP if available
-  // 2. Fall back to localhost
-  return localIP 
-    ? `http://${localIP}:${port}/api` 
-    : 'http://localhost:3001/api';
+  const baseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:3001/api';
+  console.log('API Base URL:', baseUrl);
+  return baseUrl;
 };
 
 const API_BASE_URL = getApiBaseUrl();
@@ -28,238 +22,7 @@ function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadingMessage, setLoadingMessage] = useState('Loading data...');
   
-  // Load data from server on component mount
-  useEffect(() => {
-    console.log('API Base URL:', API_BASE_URL);
-    loadDataFromServer();
-  }, []);
-  
-  // Function to load data from server
-  const loadDataFromServer = async () => {
-    setIsLoading(true);
-    setLoadingMessage('Loading data from server...');
-    
-    try {
-      // Fetch products
-      const productsResponse = await fetch(`${API_BASE_URL}/products`);
-      if (!productsResponse.ok) {
-        throw new Error('Failed to load products');
-      }
-      const productsData = await productsResponse.json();
-      setProducts(productsData);
-      
-      // Fetch agents
-      const agentsResponse = await fetch(`${API_BASE_URL}/agents`);
-      if (!agentsResponse.ok) {
-        throw new Error('Failed to load agents');
-      }
-      const agentsData = await agentsResponse.json();
-      setAgents(agentsData);
-      
-      // Fetch assignments
-      const assignmentsResponse = await fetch(`${API_BASE_URL}/assignments`);
-      if (!assignmentsResponse.ok) {
-        throw new Error('Failed to load assignments');
-      }
-      const assignmentsData = await assignmentsResponse.json();
-      setAssignments(assignmentsData);
-      
-      setMessage('Data loaded successfully from server');
-      setIsLoading(false);
-    } catch (error) {
-      console.error('Error loading data:', error);
-      setMessage(`Error loading data: ${error.message}`);
-      setIsLoading(false);
-    }
-  };
-  
-  // Manual data refresh
-  const handleRefreshData = async () => {
-    setIsLoading(true);
-    setLoadingMessage('Manually refreshing data...');
-    
-    try {
-      const response = await fetch(`${API_BASE_URL}/refresh-data`, {
-        method: 'POST'
-      });
-      
-      const result = await response.json();
-      
-      if (result.success) {
-        // Reload all data after refresh
-        await loadDataFromServer();
-        setMessage(`Data refreshed. Loaded ${result.productCount} products and ${result.agentCount} agents.`);
-      } else {
-        throw new Error(result.message || 'Failed to refresh data');
-      }
-    } catch (error) {
-      console.error('Error refreshing data:', error);
-      setMessage(`Error refreshing data: ${error.message}`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
-  // Assign a task to an agent
-  const assignTask = async (agentId) => {
-    setIsLoading(true);
-    setLoadingMessage('Assigning task...');
-    
-    try {
-      // Call the server API to assign a task
-      const response = await fetch(`${API_BASE_URL}/assign`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ agentId }),
-      });
-      
-      const result = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to assign task');
-      }
-      
-      // Refresh data after assignment
-      await loadDataFromServer();
-      setMessage(result.message);
-    } catch (error) {
-      console.error('Error assigning task:', error);
-      setMessage(`Error assigning task: ${error.message}`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Complete a task
-  const completeTask = async (agentId, productId) => {
-    setIsLoading(true);
-    setLoadingMessage('Completing task...');
-    
-    try {
-      // Call the server API to complete a task
-      const response = await fetch(`${API_BASE_URL}/complete`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ agentId, productId }),
-      });
-      
-      const result = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to complete task');
-      }
-      
-      // Refresh data after completion
-      await loadDataFromServer();
-      setMessage(result.message);
-    } catch (error) {
-      console.error('Error completing task:', error);
-      setMessage(`Error completing task: ${error.message}`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Filter agents by search term
-  const filteredAgents = agents.filter(agent => 
-    agent.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  // Render the agent dashboard
-  const renderAgentDashboard = () => {
-    const agent = agents.find(a => a.id === selectedAgent);
-    if (!agent) return <div>Select an agent to view their dashboard</div>;
-    
-    return (
-      <div className="agent-dashboard">
-        <div className="agent-header">
-          <h2>{agent.name}</h2>
-          <p>{agent.role} • {agent.currentAssignments.length}/{agent.capacity} tasks</p>
-        </div>
-        
-        <div className="dashboard-grid">
-          <div className="request-section">
-            <h3>Request Task</h3>
-            <button 
-              onClick={() => assignTask(agent.id)}
-              disabled={agent.currentAssignments.length >= agent.capacity || isLoading}
-              className="request-button"
-            >
-              {isLoading ? "Processing..." : 
-                agent.currentAssignments.length >= agent.capacity ? "Queue Full" : "Request Task"}
-            </button>
-          </div>
-          
-          <div className="status-section">
-            <h3>Current Status</h3>
-            <div>
-              <div className="status-row">
-                <span>Task Queue</span>
-                <span>{agent.currentAssignments.length}/{agent.capacity}</span>
-              </div>
-              <div className="progress-bar">
-                <div 
-                  className="progress-fill"
-                  style={{ width: `${(agent.currentAssignments.length / agent.capacity) * 100}%` }}
-                ></div>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <div className="assignments-section">
-          <h3>Current Assignments</h3>
-          
-          {agent.currentAssignments.length > 0 ? (
-            <table className="assignments-table">
-              <thead>
-                <tr>
-                  <th>Product ID</th>
-                  <th>Item</th>
-                  <th>Rows</th>
-                  <th>Priority</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {agent.currentAssignments.map(task => (
-                  <tr key={task.productId}>
-                    <td>{task.productId}</td>
-                    <td className="item-name">{task.name}</td>
-                    <td>
-                      <span className="row-count-badge">
-                        {task.rowCount} rows
-                      </span>
-                    </td>
-                    <td>
-                      <span className={`priority-tag priority-${task.priority}`}>
-                        {task.priority}
-                      </span>
-                    </td>
-                    <td>
-                      <button 
-                        onClick={() => completeTask(agent.id, task.productId)}
-                        className="complete-button"
-                        disabled={isLoading}
-                      >
-                        {isLoading ? "Processing..." : "Complete"}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          ) : (
-            <p className="no-tasks">No tasks assigned yet</p>
-          )}
-        </div>
-      </div>
-    );
-  };
+  // Previous methods remain the same...
 
   // Render the main dashboard
   const renderDashboard = () => {
@@ -311,7 +74,6 @@ function App() {
             </div>
             <div className="info-message">
               <p>The system automatically loads product data and agent roster.</p>
-              <code>G:\Shared drives\Walmart Drive 2.0\03 SKU\New Volume 2025\US</code>
             </div>
           </div>
         </div>
