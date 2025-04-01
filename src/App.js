@@ -18,7 +18,9 @@ function App() {
   const [loadingMessage, setLoadingMessage] = useState('Loading data...');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedAgent, setSelectedAgent] = useState(null);
-  const [view, setView] = useState('agents'); // "agents", "completed", or "unassigned"
+  const [view, setView] = useState('agents'); // "agents", "completed", "unassigned"
+  const [completedTasks, setCompletedTasks] = useState([]);
+  const [unassignedProducts, setUnassignedProducts] = useState([]);
 
   const loadDataFromServer = useCallback(async () => {
     setIsLoading(true);
@@ -35,6 +37,7 @@ function App() {
       const productsData = await productsRes.json();
       const agentsData = await agentsRes.json();
       const assignmentsData = await assignmentsRes.json();
+      console.log("Products loaded:", productsData.length);
       setProducts(productsData);
       setAgents(agentsData);
       setAssignments(assignmentsData);
@@ -51,7 +54,6 @@ function App() {
     loadDataFromServer();
   }, [loadDataFromServer]);
 
-  // Refresh
   const handleRefreshData = async () => {
     setIsLoading(true);
     setLoadingMessage('Refreshing data from server...');
@@ -71,7 +73,6 @@ function App() {
     }
   };
 
-  // Request a new task for an agent
   const requestTask = async (agentId) => {
     setIsLoading(true);
     setLoadingMessage('Requesting task...');
@@ -95,7 +96,6 @@ function App() {
     }
   };
 
-  // Complete a task
   const completeTask = async (agentId, productId) => {
     setIsLoading(true);
     setLoadingMessage('Completing task...');
@@ -119,7 +119,6 @@ function App() {
     }
   };
 
-  // Unassign a single product
   const unassignProduct = async (productId) => {
     setIsLoading(true);
     setLoadingMessage('Unassigning product...');
@@ -143,7 +142,6 @@ function App() {
     }
   };
 
-  // Unassign all tasks from an agent
   const unassignAgentTasks = async (agentId) => {
     setIsLoading(true);
     setLoadingMessage('Unassigning agent tasks...');
@@ -167,7 +165,6 @@ function App() {
     }
   };
 
-  // Unassign all tasks from all agents
   const unassignAllTasks = async () => {
     setIsLoading(true);
     setLoadingMessage('Unassigning all tasks...');
@@ -190,8 +187,6 @@ function App() {
     }
   };
 
-  // Completed tasks dashboard
-  const [completedTasks, setCompletedTasks] = useState([]);
   const loadCompletedTasks = async () => {
     setIsLoading(true);
     setLoadingMessage('Loading completed tasks...');
@@ -209,12 +204,11 @@ function App() {
       setIsLoading(false);
     }
   };
+
   const downloadCompletedCSV = () => {
     window.open(`${API_BASE_URL}/download/completed-assignments`, '_blank');
   };
 
-  // Unassigned products dashboard
-  const [unassignedProducts, setUnassignedProducts] = useState([]);
   const loadUnassignedProducts = async () => {
     setIsLoading(true);
     setLoadingMessage('Loading unassigned products...');
@@ -232,11 +226,11 @@ function App() {
       setIsLoading(false);
     }
   };
+
   const downloadUnassignedCSV = () => {
     window.open(`${API_BASE_URL}/download/unassigned-products`, '_blank');
   };
 
-  // Switch dashboard views
   const handleViewChange = (newView) => {
     setView(newView);
     if (newView === 'completed') {
@@ -246,7 +240,6 @@ function App() {
     }
   };
 
-  // Render Agent Dashboard
   const renderAgentDashboard = () => {
     const agent = agents.find(a => a.id === selectedAgent);
     if (!agent) return <div>Select an agent to view their dashboard.</div>;
@@ -287,18 +280,10 @@ function App() {
                   <td>{task.assignedOn || 'N/A'}</td>
                   <td>
                     <div className="action-buttons">
-                      <button
-                        className="complete-button"
-                        onClick={() => completeTask(agent.id, task.productId)}
-                        disabled={isLoading}
-                      >
+                      <button className="complete-button" onClick={() => completeTask(agent.id, task.productId)} disabled={isLoading}>
                         Complete
                       </button>
-                      <button
-                        className="unassign-task-button"
-                        onClick={() => unassignProduct(task.productId)}
-                        disabled={isLoading}
-                      >
+                      <button className="unassign-task-button" onClick={() => unassignProduct(task.productId)} disabled={isLoading}>
                         Unassign
                       </button>
                     </div>
@@ -314,7 +299,6 @@ function App() {
     );
   };
 
-  // Render Agent List
   const renderAgentList = () => (
     <div className="agent-list-section">
       <div className="agent-list-header">
@@ -338,40 +322,28 @@ function App() {
           </tr>
         </thead>
         <tbody>
-          {agents
-            .filter(agent => agent.name.toLowerCase().includes(searchTerm.toLowerCase()))
-            .map(agent => (
-              <tr key={agent.id}>
-                <td>{agent.name}</td>
-                <td>{agent.role}</td>
-                <td>
-                  <div className="workload-bar">
-                    <div
-                      className="workload-fill"
-                      style={{ width: `${(agent.currentAssignments.length / agent.capacity) * 100}%` }}
-                    />
-                  </div>
-                  <span className="workload-text">
-                    {agent.currentAssignments.length}/{agent.capacity}
-                  </span>
-                </td>
-                <td>
-                  <button
-                    className="view-button"
-                    onClick={() => setSelectedAgent(agent.id)}
-                    disabled={isLoading}
-                  >
-                    View Dashboard
-                  </button>
-                </td>
-              </tr>
-            ))}
+          {agents.filter(agent => agent.name.toLowerCase().includes(searchTerm.toLowerCase())).map(agent => (
+            <tr key={agent.id}>
+              <td>{agent.name}</td>
+              <td>{agent.role}</td>
+              <td>
+                <div className="workload-bar">
+                  <div className="workload-fill" style={{ width: `${(agent.currentAssignments.length / agent.capacity) * 100}%` }}></div>
+                </div>
+                <span className="workload-text">{agent.currentAssignments.length}/{agent.capacity}</span>
+              </td>
+              <td>
+                <button className="view-button" onClick={() => setSelectedAgent(agent.id)} disabled={isLoading}>
+                  View Dashboard
+                </button>
+              </td>
+            </tr>
+          ))}
         </tbody>
       </table>
     </div>
   );
 
-  // Render Completed Tasks
   const renderCompletedTasks = () => (
     <div className="agent-dashboard">
       <h2>Completed Tasks</h2>
@@ -407,7 +379,6 @@ function App() {
     </div>
   );
 
-  // Render Unassigned Products
   const renderUnassignedProducts = () => (
     <div className="agent-dashboard">
       <h2>Unassigned Products</h2>
@@ -443,15 +414,9 @@ function App() {
     </div>
   );
 
-  // Render the main dashboard
   const renderDashboard = () => {
-    if (view === 'completed') {
-      return renderCompletedTasks();
-    }
-    if (view === 'unassigned') {
-      return renderUnassignedProducts();
-    }
-    // default "agents" view
+    if (view === 'completed') return renderCompletedTasks();
+    if (view === 'unassigned') return renderUnassignedProducts();
     return (
       <div className="dashboard">
         <div className="status-cards">
@@ -478,10 +443,10 @@ function App() {
               </button>
             </div>
             <div className="button-group" style={{ marginTop: '15px' }}>
-              <button onClick={() => handleViewChange('completed')} className="view-button" disabled={isLoading}>
+              <button onClick={() => { setView('completed'); loadCompletedTasks(); }} className="view-button" disabled={isLoading}>
                 View Completed Tasks
               </button>
-              <button onClick={() => handleViewChange('unassigned')} className="view-button" disabled={isLoading}>
+              <button onClick={() => { setView('unassigned'); loadUnassignedProducts(); }} className="view-button" disabled={isLoading}>
                 View Unassigned Products
               </button>
             </div>
