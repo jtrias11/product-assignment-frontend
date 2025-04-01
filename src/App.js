@@ -106,9 +106,9 @@ function App() {
     
     // Sample products
     setProducts([
-      { id: "6TBLDVZTR0H4", itemId: 15847619937, name: "Girl's Hoodie Long Sleeve Soft Sweatshirt", priority: "P3", createdOn: "2025-03-31 00:00:03", assigned: false },
-      { id: "7AV4W07EGKBV", itemId: 15895965957, name: "Cute Hoodies For Teen Girls Trendy Preppy", priority: "P3", createdOn: "2025-03-31 00:00:05", assigned: false },
-      { id: "9KLTW5Z8MQPX", itemId: 15847689402, name: "Winter Jacket Men Warm Padded Parka", priority: "P2", createdOn: "2025-03-31 00:00:07", assigned: false }
+      { id: "6TBLDVZTR0H4", itemId: 15847619937, name: "Girl's Hoodie Long Sleeve Soft Sweatshirt", priority: "P3", createdOn: "2025-03-31 00:00:03", assigned: false, count: 5, tenantId: "SAMPLE1" },
+      { id: "7AV4W07EGKBV", itemId: 15895965957, name: "Cute Hoodies For Teen Girls Trendy Preppy", priority: "P3", createdOn: "2025-03-31 00:00:05", assigned: false, count: 3, tenantId: "SAMPLE2" },
+      { id: "9KLTW5Z8MQPX", itemId: 15847689402, name: "Winter Jacket Men Warm Padded Parka", priority: "P2", createdOn: "2025-03-31 00:00:07", assigned: false, count: 2, tenantId: "SAMPLE3" }
     ]);
   };
 
@@ -235,9 +235,11 @@ function App() {
             <table className="assignments-table">
               <thead>
                 <tr>
-                  <th>Product ID</th>
-                  <th>Item</th>
+                  <th>Abstract Product ID</th>
                   <th>Priority</th>
+                  <th>Tenant ID</th>
+                  <th>Created Date</th>
+                  <th>Count</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -245,12 +247,14 @@ function App() {
                 {agent.currentAssignments.map(task => (
                   <tr key={task.productId}>
                     <td>{task.productId}</td>
-                    <td className="item-name">{task.name}</td>
                     <td>
                       <span className={`priority-tag priority-${task.priority}`}>
                         {task.priority}
                       </span>
                     </td>
+                    <td>{task.tenantId || 'N/A'}</td>
+                    <td>{task.createdOn || 'N/A'}</td>
+                    <td>{task.count || 1}</td>
                     <td>
                       <button 
                         onClick={() => completeTask(agent.id, task.productId)}
