@@ -19,7 +19,7 @@ function App() {
   const [loadingMessage, setLoadingMessage] = useState('Loading data...');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedAgent, setSelectedAgent] = useState(null);
-  const [view, setView] = useState('agents'); // "agents", "completed", "unassigned", "previously-assigned", "queue"
+  const [view, setView] = useState('agents'); // "agents", "completed", "available", "prev-assigned", "queue"
   const [completedTasks, setCompletedTasks] = useState([]);
   const [unassignedProducts, setUnassignedProducts] = useState([]);
   const [previouslyAssigned, setPreviouslyAssigned] = useState([]);
@@ -59,7 +59,7 @@ function App() {
     loadDataFromServer();
   }, [loadDataFromServer]);
 
-  // File upload handler
+  // File upload handler – renamed to Manual Upload
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -88,11 +88,7 @@ function App() {
       
       const result = await response.json();
       
-      // Show a detailed success message
-      setMessage(
-        result.message || 
-        `Success! Added ${result.newProducts || 0} new products and updated ${result.updatedProducts || 0} existing products.`
-      );
+      setMessage(result.message);
       setUploadSuccess(true);
       
       // Reload data after successful upload
@@ -170,7 +166,6 @@ function App() {
     }
   };
 
-  // New handler for completing all tasks for an agent
   const completeAllTasksForAgent = async (agentId) => {
     setIsLoading(true);
     setLoadingMessage('Completing all tasks for agent...');
@@ -285,43 +280,43 @@ function App() {
 
   const loadUnassignedProducts = async () => {
     setIsLoading(true);
-    setLoadingMessage('Loading unassigned products...');
+    setLoadingMessage('Loading available products...');
     try {
       const res = await fetch(`${API_BASE_URL}/unassigned-products`);
       if (!res.ok) {
-        throw new Error('Failed to load unassigned products');
+        throw new Error('Failed to load available products');
       }
       const data = await res.json();
       setUnassignedProducts(data);
       setIsLoading(false);
     } catch (error) {
-      console.error('Error loading unassigned products:', error);
-      setMessage(`Error loading unassigned products: ${error.message}`);
+      console.error('Error loading available products:', error);
+      setMessage(`Error loading available products: ${error.message}`);
       setIsLoading(false);
     }
   };
 
   const loadPreviouslyAssigned = async () => {
     setIsLoading(true);
-    setLoadingMessage('Loading previously assigned products...');
+    setLoadingMessage('Loading previously assigned tasks...');
     try {
       const res = await fetch(`${API_BASE_URL}/previously-assigned`);
       if (!res.ok) {
-        throw new Error('Failed to load previously assigned products');
+        throw new Error('Failed to load previously assigned tasks');
       }
       const data = await res.json();
       setPreviouslyAssigned(data);
       setIsLoading(false);
     } catch (error) {
-      console.error('Error loading previously assigned products:', error);
-      setMessage(`Error loading previously assigned products: ${error.message}`);
+      console.error('Error loading previously assigned tasks:', error);
+      setMessage(`Error loading previously assigned tasks: ${error.message}`);
       setIsLoading(false);
     }
   };
 
   const loadQueue = async () => {
     setIsLoading(true);
-    setLoadingMessage('Loading product queue...');
+    setLoadingMessage('Loading queue...');
     try {
       const res = await fetch(`${API_BASE_URL}/queue`);
       if (!res.ok) {
@@ -357,9 +352,9 @@ function App() {
     setView(newView);
     if (newView === 'completed') {
       loadCompletedTasks();
-    } else if (newView === 'unassigned') {
+    } else if (newView === 'available') {
       loadUnassignedProducts();
-    } else if (newView === 'previously-assigned') {
+    } else if (newView === 'prev-assigned') {
       loadPreviouslyAssigned();
     } else if (newView === 'queue') {
       loadQueue();
@@ -399,6 +394,36 @@ function App() {
     );
   };
 
+  // Render top header with navigation and manual upload (left/right)
+  const renderHeader = () => (
+    <header className="app-header">
+      <div className="header-left">
+        <div className="manual-upload">
+          <input
+            type="file"
+            id="output-csv"
+            accept=".csv"
+            onChange={handleFileUpload}
+            disabled={isLoading}
+            className="file-input"
+          />
+          <label htmlFor="output-csv" className={`file-label ${uploadSuccess ? 'upload-success' : ''}`}>
+            {uploadSuccess ? '✓ Uploaded' : 'Manual Upload'}
+          </label>
+        </div>
+      </div>
+      <div className="header-right">
+        <nav className="nav-choices">
+          <button onClick={() => handleViewChange('completed')} disabled={isLoading}>Completed Tasks</button>
+          <button onClick={() => handleViewChange('available')} disabled={isLoading}>Available Products</button>
+          <button onClick={() => handleViewChange('prev-assigned')} disabled={isLoading}>Prev Assigned</button>
+          <button onClick={() => handleViewChange('queue')} disabled={isLoading}>Queue Only</button>
+        </nav>
+      </div>
+      {message && <div className="message">{message}</div>}
+    </header>
+  );
+
   const renderAgentDashboard = () => {
     const agent = agents.find(a => a.id === selectedAgent);
     if (!agent) return <div>Select an agent to view their dashboard.</div>;
@@ -407,31 +432,31 @@ function App() {
         <button className="back-button" onClick={() => setSelectedAgent(null)}>Back to Agent List</button>
         <h2>{agent.name} - Dashboard</h2>
         <p>{agent.role} • {agent.currentAssignments.length} / {agent.capacity} tasks</p>
-        <div className="button-group">
+        <div className="button-group agent-actions">
           <button className="request-button" onClick={() => requestTask(agent.id)} disabled={isLoading || agent.currentAssignments.length >= agent.capacity}>
             {isLoading ? "Processing..." : agent.currentAssignments.length >= agent.capacity ? "Queue Full" : "Request Task"}
           </button>
           {agent.currentAssignments.length > 0 && (
-            <>
+            <div className="action-row">
               <button 
-                className="unassign-button" 
+                className="unassign-task-button action-btn"
                 onClick={() => showConfirmDialog(
-                  "Unassign All Tasks", 
+                  "Unassign Task", 
                   `Are you sure you want to unassign all tasks from ${agent.name}?`,
                   () => unassignAgentTasks(agent.id)
                 )} 
                 disabled={isLoading}
               >
-                Unassign All Tasks
+                Unassign Tasks
               </button>
               <button
-                className="complete-all-button"
+                className="complete-all-button action-btn"
                 onClick={() => completeAllTasksForAgent(agent.id)}
                 disabled={isLoading || agent.currentAssignments.length === 0}
               >
-                {isLoading ? "Processing..." : "Complete All Tasks"}
+                Complete All Tasks
               </button>
-            </>
+            </div>
           )}
         </div>
         {agent.currentAssignments.length > 0 ? (
@@ -522,7 +547,7 @@ function App() {
               </td>
               <td className="agent-action-buttons">
                 <button className="view-button" onClick={() => setSelectedAgent(agent.id)} disabled={isLoading}>
-                  View Dashboard
+                  Dashboard
                 </button>
                 {agent.currentAssignments.length > 0 && (
                   <button 
@@ -587,7 +612,7 @@ function App() {
     <div className="agent-dashboard">
       <div className="view-nav">
         <button className="back-button" onClick={() => setView('agents')}>Back to Dashboard</button>
-        <h2>Unassigned Products</h2>
+        <h2>Available Products</h2>
       </div>
       <button onClick={downloadUnassignedCSV} disabled={isLoading} className="download-button">
         Download CSV
@@ -622,7 +647,7 @@ function App() {
           </tbody>
         </table>
       ) : (
-        <p className="no-tasks">No unassigned products found.</p>
+        <p className="no-tasks">No available products found.</p>
       )}
     </div>
   );
@@ -631,7 +656,7 @@ function App() {
     <div className="agent-dashboard">
       <div className="view-nav">
         <button className="back-button" onClick={() => setView('agents')}>Back to Dashboard</button>
-        <h2>Previously Assigned Products</h2>
+        <h2>Prev Assigned</h2>
       </div>
       <button onClick={downloadPreviouslyAssignedCSV} disabled={isLoading} className="download-button">
         Download CSV
@@ -668,7 +693,7 @@ function App() {
           </tbody>
         </table>
       ) : (
-        <p className="no-tasks">No previously assigned products found.</p>
+        <p className="no-tasks">No previously assigned tasks found.</p>
       )}
     </div>
   );
@@ -677,7 +702,7 @@ function App() {
     <div className="agent-dashboard">
       <div className="view-nav">
         <button className="back-button" onClick={() => setView('agents')}>Back to Dashboard</button>
-        <h2>Complete Product Queue</h2>
+        <h2>Queue Only</h2>
       </div>
       <button onClick={downloadQueueCSV} disabled={isLoading} className="download-button">
         Download CSV
@@ -727,8 +752,8 @@ function App() {
 
   const renderDashboard = () => {
     if (view === 'completed') return renderCompletedTasks();
-    if (view === 'unassigned') return renderUnassignedProducts();
-    if (view === 'previously-assigned') return renderPreviouslyAssigned();
+    if (view === 'available') return renderUnassignedProducts();
+    if (view === 'prev-assigned') return renderPreviouslyAssigned();
     if (view === 'queue') return renderQueue();
     return (
       <div className="dashboard">
@@ -747,31 +772,11 @@ function App() {
               <span>Total Assignments:</span>
               <span>{assignments.length}</span>
             </div>
-            
-            {/* File Upload Section */}
-            <div className="file-upload-section">
-              <h4>Upload New Products CSV</h4>
-              <div className="file-input-container">
-                <input
-                  type="file"
-                  id="output-csv"
-                  accept=".csv"
-                  onChange={handleFileUpload}
-                  disabled={isLoading}
-                  className="file-input"
-                />
-                <label htmlFor="output-csv" className={`file-label ${uploadSuccess ? 'upload-success' : ''}`}>
-                  {uploadSuccess ? '✓ File Uploaded' : 'Choose File'}
-                </label>
-              </div>
-              <p className="file-help-text">Select CSV to add new products (does not replace existing ones)</p>
-            </div>
-
             <div className="button-group">
               <button className="refresh-button" onClick={handleRefreshData} disabled={isLoading}>
                 {isLoading ? "Refreshing..." : "Refresh Data"}
               </button>
-              {assignments.filter(a => !a.completed).length > 0 && (
+              {assignments.filter(a => !a.completed && !a.unassignedTime).length > 0 && (
                 <button 
                   className="unassign-all-button" 
                   onClick={() => showConfirmDialog(
@@ -785,20 +790,6 @@ function App() {
                 </button>
               )}
             </div>
-            <div className="button-group" style={{ marginTop: '15px' }}>
-              <button onClick={() => { setView('completed'); loadCompletedTasks(); }} className="view-button" disabled={isLoading}>
-                View Completed Tasks
-              </button>
-              <button onClick={() => { setView('unassigned'); loadUnassignedProducts(); }} className="view-button" disabled={isLoading}>
-                View Unassigned Products
-              </button>
-              <button onClick={() => { setView('previously-assigned'); loadPreviouslyAssigned(); }} className="view-button" disabled={isLoading}>
-                View Previously Assigned
-              </button>
-              <button onClick={() => { setView('queue'); loadQueue(); }} className="view-button view-queue-button" disabled={isLoading}>
-                View Complete Queue
-              </button>
-            </div>
           </div>
         </div>
         {selectedAgent ? renderAgentDashboard() : renderAgentList()}
@@ -808,10 +799,7 @@ function App() {
 
   return (
     <div className="app">
-      <header className="app-header">
-        <h1>Product Assignment System</h1>
-        {message && <div className="message">{message}</div>}
-      </header>
+      {renderHeader()}
       <main className="app-content">
         {isLoading && (
           <div className="loading-overlay">
