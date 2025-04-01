@@ -3,7 +3,6 @@ import './App.css';
 
 // Configure API Base URL dynamically
 const getApiBaseUrl = () => {
-  // Use environment variable if set, otherwise use the deployed backend URL
   const baseUrl = process.env.REACT_APP_API_BASE_URL || 'https://product-assignment-server.onrender.com/api';
   console.log('API Base URL:', baseUrl);
   return baseUrl;
@@ -12,7 +11,6 @@ const getApiBaseUrl = () => {
 const API_BASE_URL = getApiBaseUrl();
 
 function App() {
-  // State for managing data
   const [agents, setAgents] = useState([]);
   const [products, setProducts] = useState([]);
   const [message, setMessage] = useState('');
@@ -23,54 +21,43 @@ function App() {
   const [loadingMessage, setLoadingMessage] = useState('Loading data...');
   const [confirmDialog, setConfirmDialog] = useState({ show: false, title: '', message: '', onConfirm: null });
   
-  // Function to load data from server (using useCallback to prevent dependency issues)
+  // Load data from server
   const loadDataFromServer = useCallback(async () => {
     setIsLoading(true);
     setLoadingMessage('Loading data from server...');
     
     try {
-      // Fetch products with detailed error handling
       console.log('Fetching products from:', `${API_BASE_URL}/products`);
       const productsResponse = await fetch(`${API_BASE_URL}/products`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        }
+        headers: { 'Content-Type': 'application/json' }
       });
       
       console.log('Products Response Status:', productsResponse.status);
-      
       if (!productsResponse.ok) {
         const errorText = await productsResponse.text();
         console.error('Products Fetch Error:', errorText);
         throw new Error(`Failed to load products: ${errorText}`);
       }
-      
       const productsData = await productsResponse.json();
       console.log('Products Loaded:', productsData.length);
       setProducts(productsData);
       
-      // Fetch agents with similar error handling
       const agentsResponse = await fetch(`${API_BASE_URL}/agents`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        }
+        headers: { 'Content-Type': 'application/json' }
       });
       
       console.log('Agents Response Status:', agentsResponse.status);
-      
       if (!agentsResponse.ok) {
         const errorText = await agentsResponse.text();
         console.error('Agents Fetch Error:', errorText);
         throw new Error(`Failed to load agents: ${errorText}`);
       }
-      
       const agentsData = await agentsResponse.json();
       console.log('Agents Loaded:', agentsData.length);
       setAgents(agentsData);
       
-      // Fetch assignments
       const assignmentsResponse = await fetch(`${API_BASE_URL}/assignments`);
       if (!assignmentsResponse.ok) {
         throw new Error('Failed to load assignments');
@@ -81,22 +68,16 @@ function App() {
       setMessage('Data loaded successfully from server');
       setIsLoading(false);
     } catch (error) {
-      console.error('Comprehensive Error:', error);
+      console.error('Error loading data:', error);
       setMessage(`Error loading data: ${error.message}`);
       setIsLoading(false);
-      loadSampleData(); // Fallback to sample data
+      loadSampleData();
     }
   }, []);
   
-  // Load data from server on component mount
-  useEffect(() => {
-    loadDataFromServer();
-  }, [loadDataFromServer]);
-  
-  // Sample data loader (fallback)
+  // Fallback sample data
   const loadSampleData = () => {
     console.log('Loading sample data as fallback...');
-    // Sample agents
     setAgents([
       { id: 1, name: "Aaron Dale Yaeso Bandong", role: "Item Review", capacity: 10, currentAssignments: [] },
       { id: 2, name: "Aaron Marx Lenin Tuban Oriola", role: "Item Review", capacity: 10, currentAssignments: [] },
@@ -105,36 +86,30 @@ function App() {
       { id: 5, name: "Aileen Punsalan Dionisio", role: "Item Review", capacity: 10, currentAssignments: [] }
     ]);
     
-    // Sample products
     setProducts([
       { id: "6TBLDVZTR0H4", itemId: 15847619937, name: "Girl's Hoodie Long Sleeve Soft Sweatshirt", priority: "P3", createdOn: "2025-03-31 00:00:03", assigned: false, count: 5, tenantId: "SAMPLE1" },
       { id: "7AV4W07EGKBV", itemId: 15895965957, name: "Cute Hoodies For Teen Girls Trendy Preppy", priority: "P3", createdOn: "2025-03-31 00:00:05", assigned: false, count: 3, tenantId: "SAMPLE2" },
       { id: "9KLTW5Z8MQPX", itemId: 15847689402, name: "Winter Jacket Men Warm Padded Parka", priority: "P2", createdOn: "2025-03-31 00:00:07", assigned: false, count: 2, tenantId: "SAMPLE3" }
     ]);
   };
-
-  // Assign a task to an agent
+  
+  useEffect(() => {
+    loadDataFromServer();
+  }, [loadDataFromServer]);
+  
   const assignTask = async (agentId) => {
     setIsLoading(true);
     setLoadingMessage('Assigning task...');
-    
     try {
-      // Call the server API to assign a task
       const response = await fetch(`${API_BASE_URL}/assign`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ agentId }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agentId })
       });
-      
       const result = await response.json();
-      
       if (!response.ok) {
         throw new Error(result.error || 'Failed to assign task');
       }
-      
-      // Refresh data after assignment
       await loadDataFromServer();
       setMessage(result.message);
     } catch (error) {
@@ -145,28 +120,19 @@ function App() {
     }
   };
 
-  // Complete a task
   const completeTask = async (agentId, productId) => {
     setIsLoading(true);
     setLoadingMessage('Completing task...');
-    
     try {
-      // Call the server API to complete a task
       const response = await fetch(`${API_BASE_URL}/complete`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ agentId, productId }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agentId, productId })
       });
-      
       const result = await response.json();
-      
       if (!response.ok) {
         throw new Error(result.error || 'Failed to complete task');
       }
-      
-      // Refresh data after completion
       await loadDataFromServer();
       setMessage(result.message);
     } catch (error) {
@@ -177,26 +143,18 @@ function App() {
     }
   };
 
-  // Unassign all tasks from all agents
   const unassignAllTasks = async () => {
     setIsLoading(true);
     setLoadingMessage('Unassigning all tasks...');
-    
     try {
       const response = await fetch(`${API_BASE_URL}/unassign-all`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        }
+        headers: { 'Content-Type': 'application/json' }
       });
-      
       const result = await response.json();
-      
       if (!response.ok) {
         throw new Error(result.error || 'Failed to unassign all tasks');
       }
-      
-      // Refresh data
       await loadDataFromServer();
       setMessage(result.message);
     } catch (error) {
@@ -208,27 +166,19 @@ function App() {
     }
   };
 
-  // Unassign all tasks from a specific agent
   const unassignAgentTasks = async (agentId) => {
     setIsLoading(true);
     setLoadingMessage('Unassigning agent tasks...');
-    
     try {
       const response = await fetch(`${API_BASE_URL}/unassign-agent`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ agentId }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agentId })
       });
-      
       const result = await response.json();
-      
       if (!response.ok) {
         throw new Error(result.error || 'Failed to unassign agent tasks');
       }
-      
-      // Refresh data
       await loadDataFromServer();
       setMessage(result.message);
     } catch (error) {
@@ -240,27 +190,19 @@ function App() {
     }
   };
 
-  // Unassign a specific product
   const unassignProduct = async (productId) => {
     setIsLoading(true);
     setLoadingMessage('Unassigning product...');
-    
     try {
       const response = await fetch(`${API_BASE_URL}/unassign-product`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ productId }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productId })
       });
-      
       const result = await response.json();
-      
       if (!response.ok) {
         throw new Error(result.error || 'Failed to unassign product');
       }
-      
-      // Refresh data
       await loadDataFromServer();
       setMessage(result.message);
     } catch (error) {
@@ -272,25 +214,40 @@ function App() {
     }
   };
 
-  // Handle manual data refresh
-  const handleRefreshData = () => {
-    loadDataFromServer();
+  // Updated Refresh Data Handler
+  const handleRefreshData = async () => {
+    setIsLoading(true);
+    setLoadingMessage('Refreshing data from server...');
+    try {
+      const refreshResponse = await fetch(`${API_BASE_URL}/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (!refreshResponse.ok) {
+        const errorText = await refreshResponse.text();
+        console.error('Refresh Fetch Error:', errorText);
+        throw new Error(`Failed to refresh data: ${errorText}`);
+      }
+      await loadDataFromServer();
+      setMessage('Data refreshed successfully');
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+      setMessage(`Error refreshing data: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  // Show confirm dialog
   const showConfirmDialog = (title, message, onConfirm) => {
     setConfirmDialog({ show: true, title, message, onConfirm });
   };
 
-  // Filter agents by search term
   const filteredAgents = agents.filter(agent => 
     agent.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Render confirmation dialog
   const renderConfirmDialog = () => {
     if (!confirmDialog.show) return null;
-    
     return (
       <div className="confirm-overlay">
         <div className="confirm-dialog">
@@ -315,18 +272,15 @@ function App() {
     );
   };
 
-  // Render the agent dashboard
   const renderAgentDashboard = () => {
     const agent = agents.find(a => a.id === selectedAgent);
     if (!agent) return <div>Select an agent to view their dashboard</div>;
-    
     return (
       <div className="agent-dashboard">
         <div className="agent-header">
           <h2>{agent.name}</h2>
           <p>{agent.role} • {agent.currentAssignments.length}/{agent.capacity} tasks</p>
         </div>
-        
         <div className="dashboard-grid">
           <div className="request-section">
             <h3>Request Task</h3>
@@ -338,7 +292,6 @@ function App() {
               {isLoading ? "Processing..." : 
                 agent.currentAssignments.length >= agent.capacity ? "Queue Full" : "Request Task"}
             </button>
-            
             {agent.currentAssignments.length > 0 && (
               <button 
                 onClick={() => showConfirmDialog(
@@ -353,7 +306,6 @@ function App() {
               </button>
             )}
           </div>
-          
           <div className="status-section">
             <h3>Current Status</h3>
             <div>
@@ -370,10 +322,8 @@ function App() {
             </div>
           </div>
         </div>
-        
         <div className="assignments-section">
           <h3>Current Assignments</h3>
-          
           {agent.currentAssignments.length > 0 ? (
             <table className="assignments-table">
               <thead>
@@ -434,7 +384,6 @@ function App() {
     );
   };
 
-  // Render the main dashboard
   const renderDashboard = () => {
     return (
       <div className="dashboard">
@@ -465,7 +414,6 @@ function App() {
               >
                 {isLoading ? "Refreshing..." : "Refresh Data"}
               </button>
-              
               {assignments.length > 0 && (
                 <button 
                   onClick={() => showConfirmDialog(
@@ -481,7 +429,6 @@ function App() {
               )}
             </div>
           </div>
-          
           <div className="status-card">
             <h3>Server Information</h3>
             <div className="status-item">
@@ -503,7 +450,6 @@ function App() {
             </div>
           </div>
         </div>
-        
         {selectedAgent ? (
           <div>
             <button 
@@ -527,7 +473,6 @@ function App() {
                 />
               </div>
             </div>
-            
             <table className="agents-table">
               <thead>
                 <tr>
@@ -586,18 +531,14 @@ function App() {
     );
   };
 
-  // Main render function
   return (
     <div className="app">
       <header className="app-header">
         <h1>Product ID Assignment System</h1>
         {message && (
-          <div className="message">
-            {message}
-          </div>
+          <div className="message">{message}</div>
         )}
       </header>
-
       <main className="app-content">
         {isLoading && (
           <div className="loading-overlay">
@@ -607,7 +548,6 @@ function App() {
             </div>
           </div>
         )}
-        
         {renderDashboard()}
         {renderConfirmDialog()}
       </main>
