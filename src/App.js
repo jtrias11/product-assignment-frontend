@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import './App.css';
 
 // Configure API Base URL dynamically
 const getApiBaseUrl = () => {
-  const baseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:3001/api';
+  // Use environment variable if set, otherwise use the deployed backend URL
+  const baseUrl = process.env.REACT_APP_API_BASE_URL || 'https://product-assignment-server.onrender.com/api';
   console.log('API Base URL:', baseUrl);
   return baseUrl;
 };
@@ -16,19 +17,13 @@ function App() {
   const [products, setProducts] = useState([]);
   const [message, setMessage] = useState('');
   const [selectedAgent, setSelectedAgent] = useState(null);
-  const [view, setView] = useState('dashboard');
   const [assignments, setAssignments] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [loadingMessage, setLoadingMessage] = useState('Loading data...');
   
-  // Load data from server on component mount
-  useEffect(() => {
-    loadDataFromServer();
-  }, []);
-  
-  // Function to load data from server
-  const loadDataFromServer = async () => {
+  // Function to load data from server (using useCallback to prevent dependency issues)
+  const loadDataFromServer = useCallback(async () => {
     setIsLoading(true);
     setLoadingMessage('Loading data from server...');
     
@@ -90,10 +85,16 @@ function App() {
       setIsLoading(false);
       loadSampleData(); // Fallback to sample data
     }
-  };
+  }, []);
+  
+  // Load data from server on component mount
+  useEffect(() => {
+    loadDataFromServer();
+  }, [loadDataFromServer]);
   
   // Sample data loader (fallback)
   const loadSampleData = () => {
+    console.log('Loading sample data as fallback...');
     // Sample agents
     setAgents([
       { id: 1, name: "Aaron Dale Yaeso Bandong", role: "Item Review", capacity: 10, currentAssignments: [] },
