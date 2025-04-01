@@ -170,6 +170,30 @@ function App() {
     }
   };
 
+  // New handler for completing all tasks for an agent
+  const completeAllTasksForAgent = async (agentId) => {
+    setIsLoading(true);
+    setLoadingMessage('Completing all tasks for agent...');
+    try {
+      const res = await fetch(`${API_BASE_URL}/complete-all-agent`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agentId })
+      });
+      const result = await res.json();
+      if (!res.ok) {
+        throw new Error(result.error || 'Failed to complete all tasks');
+      }
+      await loadDataFromServer();
+      setMessage(result.message);
+    } catch (error) {
+      console.error('Error completing all tasks for agent:', error);
+      setMessage(`Error: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const unassignProduct = async (productId, agentId) => {
     setIsLoading(true);
     setLoadingMessage('Unassigning product...');
@@ -388,17 +412,26 @@ function App() {
             {isLoading ? "Processing..." : agent.currentAssignments.length >= agent.capacity ? "Queue Full" : "Request Task"}
           </button>
           {agent.currentAssignments.length > 0 && (
-            <button 
-              className="unassign-button" 
-              onClick={() => showConfirmDialog(
-                "Unassign All Tasks", 
-                `Are you sure you want to unassign all tasks from ${agent.name}?`,
-                () => unassignAgentTasks(agent.id)
-              )} 
-              disabled={isLoading}
-            >
-              Unassign All Tasks
-            </button>
+            <>
+              <button 
+                className="unassign-button" 
+                onClick={() => showConfirmDialog(
+                  "Unassign All Tasks", 
+                  `Are you sure you want to unassign all tasks from ${agent.name}?`,
+                  () => unassignAgentTasks(agent.id)
+                )} 
+                disabled={isLoading}
+              >
+                Unassign All Tasks
+              </button>
+              <button
+                className="complete-all-button"
+                onClick={() => completeAllTasksForAgent(agent.id)}
+                disabled={isLoading || agent.currentAssignments.length === 0}
+              >
+                {isLoading ? "Processing..." : "Complete All Tasks"}
+              </button>
+            </>
           )}
         </div>
         {agent.currentAssignments.length > 0 ? (
