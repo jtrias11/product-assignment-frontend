@@ -199,9 +199,6 @@ body {
   font-weight: 600;
   color: #586069;
   background-color: #f6f8fa;
-  position: sticky;
-  top: 0;
-  z-index: 10;
 }
 
 .workload-bar {
@@ -612,214 +609,73 @@ body {
   cursor: not-allowed;
 }
 
-/* Adjust agent action buttons */
-td.agent-action-buttons {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
+/* New styles for previously assigned and queue features */
+
+/* Styles for different row types */
+.previously-assigned-row {
+  background-color: #fff8dc;  /* Light yellow */
 }
 
-/* View tabs */
-.view-tabs {
-  display: flex;
-  margin-bottom: 20px;
-  border-bottom: 1px solid #e1e4e8;
+.assigned-row {
+  background-color: #e6fffa;  /* Light teal */
 }
 
-.view-tab {
-  padding: 10px 15px;
-  background-color: #f8f9fa;
-  border: 1px solid #e1e4e8;
-  border-bottom: none;
-  margin-right: 5px;
-  border-top-left-radius: 4px;
-  border-top-right-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
+/* Queue table container for horizontal scrolling on wide tables */
+.queue-table-container {
+  overflow-x: auto;
+  max-width: 100%;
 }
 
-.view-tab.active {
-  background-color: white;
-  border-bottom: 1px solid white;
-  margin-bottom: -1px;
-  font-weight: 600;
-  color: #0366d6;
+.queue-table {
+  min-width: 1100px; /* Ensure the table is wide enough to accommodate all columns */
 }
 
-/* Table filters and controls */
-.table-controls {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 15px;
-  flex-wrap: wrap;
+/* Style for the Queue button to make it stand out */
+.view-queue-button {
+  background-color: #6f42c1; /* Purple */
 }
 
-.filter-group {
-  display: flex;
-  gap: 10px;
-  align-items: center;
+.view-queue-button:hover {
+  background-color: #5e37a6;
 }
 
-.filter-group label {
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.filter-group select {
-  padding: 5px 10px;
-  border: 1px solid #e1e4e8;
-  border-radius: 4px;
-  font-size: 14px;
-}
-
-/* Table with fixed header and scrollable body */
-.table-container {
-  max-height: 600px;
-  overflow-y: auto;
-  margin-bottom: 20px;
-}
-
-/* History badge */
-.history-badge {
-  background-color: #6c757d;
-  color: white;
-  padding: 2px 6px;
-  border-radius: 10px;
-  font-size: 10px;
-  margin-left: 5px;
-}
-
-.previously-assigned {
-  background-color: #ffe8d9;
-}
-
-/* Search highlight */
-.highlight {
-  background-color: #fff3cd;
-  padding: 0 2px;
-}
-
-/* Queue view specific styles */
-.queue-table th,
-.queue-table td {
-  padding: 8px 10px;
-  font-size: 13px;
-}
-
-.queue-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 15px;
-}
-
-.queue-header h2 {
-  margin: 0;
-}
-
-.queue-stats {
-  background-color: #f8f9fa;
-  padding: 10px 15px;
-  border-radius: 4px;
-  margin-bottom: 15px;
-  font-size: 14px;
-}
-
-.stats-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 20px;
-}
-
-.stat-item {
-  display: flex;
-  flex-direction: column;
-}
-
-.stat-label {
-  font-size: 12px;
-  color: #6c757d;
-}
-
-.stat-value {
-  font-size: 16px;
-  font-weight: 600;
-}
-
-/* Different status badges */
-.status-badge {
-  display: inline-block;
-  padding: 3px 8px;
-  border-radius: 12px;
-  font-size: 11px;
-  font-weight: 600;
-}
-
-.status-available {
-  background-color: #d1e7dd;
-  color: #146c43;
-}
-
-.status-assigned {
-  background-color: #cff4fc;
-  color: #055160;
-}
-
-.status-completed {
-  background-color: #e2e3e5;
-  color: #41464b;
-}
-
-.status-previously-assigned {
-  background-color: #fff3cd;
-  color: #664d03;
-}
-
-/* Pagination controls */
-.pagination {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 20px;
-}
-
-.page-controls {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
-
-.page-button {
-  background-color: #f8f9fa;
-  border: 1px solid #ddd;
-  color: #333;
-  padding: 5px 10px;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.page-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.page-info {
-  font-size: 14px;
-}
-
-.page-size-selector {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
-
-.page-size-selector label {
-  font-size: 14px;
-}
-
-.page-size-selector select {
-  padding: 5px 10px;
-  border: 1px solid #e1e4e8;
-  border-radius: 4px;
-  font-size: 14px;
+/* Responsive adjustments for smaller screens */
+@media (max-width: 768px) {
+  .status-cards {
+    grid-template-columns: 1fr;
+  }
+  
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .search-box input {
+    width: 100%;
+  }
+  
+  .agent-list-header {
+    flex-direction: column;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  
+  .assignments-table, .agents-table {
+    font-size: 13px;
+  }
+  
+  .assignments-table th,
+  .assignments-table td,
+  .agents-table th,
+  .agents-table td {
+    padding: 8px 10px;
+  }
+  
+  .action-buttons {
+    flex-direction: column;
+    gap: 5px;
+  }
+  
+  .unassign-task-button {
+    margin-left: 0;
+  }
 }
