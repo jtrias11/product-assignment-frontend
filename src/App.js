@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import './App.css';
 
+// Configure API Base URL dynamically
 const getApiBaseUrl = () => {
+  // Use environment variable if set, otherwise use the deployed backend URL
   const baseUrl = process.env.REACT_APP_API_BASE_URL || 'https://product-assignment-server.onrender.com/api';
   console.log('API Base URL:', baseUrl);
   return baseUrl;
@@ -10,148 +12,160 @@ const getApiBaseUrl = () => {
 const API_BASE_URL = getApiBaseUrl();
 
 function App() {
+  // State for managing data
   const [agents, setAgents] = useState([]);
   const [products, setProducts] = useState([]);
-  const [assignments, setAssignments] = useState([]);
   const [message, setMessage] = useState('');
+  const [selectedAgent, setSelectedAgent] = useState(null);
+  const [assignments, setAssignments] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [loadingMessage, setLoadingMessage] = useState('Loading data...');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedAgent, setSelectedAgent] = useState(null);
-  const [view, setView] = useState('agents'); // "agents", "completed", "unassigned"
-  const [completedTasks, setCompletedTasks] = useState([]);
-  const [unassignedProducts, setUnassignedProducts] = useState([]);
-  const [confirmDialog, setConfirmDialog] = useState({ show: false, title: '', message: '', onConfirm: null });
-  const [uploadSuccess, setUploadSuccess] = useState(false);
-
+  
+  // Function to load data from server (using useCallback to prevent dependency issues)
   const loadDataFromServer = useCallback(async () => {
     setIsLoading(true);
     setLoadingMessage('Loading data from server...');
+    
     try {
-      const [productsRes, agentsRes, assignmentsRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/products`),
-        fetch(`${API_BASE_URL}/agents`),
-        fetch(`${API_BASE_URL}/assignments`)
-      ]);
-      if (!productsRes.ok || !agentsRes.ok || !assignmentsRes.ok) {
-        throw new Error('One or more fetch requests failed');
+      // Fetch products with detailed error handling
+      console.log('Fetching products from:', `${API_BASE_URL}/products`);
+      const productsResponse = await fetch(`${API_BASE_URL}/products`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+      
+      console.log('Products Response Status:', productsResponse.status);
+      
+      if (!productsResponse.ok) {
+        const errorText = await productsResponse.text();
+        console.error('Products Fetch Error:', errorText);
+        throw new Error(`Failed to load products: ${errorText}`);
       }
-      const productsData = await productsRes.json();
-      const agentsData = await agentsRes.json();
-      const assignmentsData = await assignmentsRes.json();
-      console.log("Products loaded:", productsData.length);
+      
+      const productsData = await productsResponse.json();
+      console.log('Products Loaded:', productsData.length);
       setProducts(productsData);
+      
+      // Fetch agents with similar error handling
+      const agentsResponse = await fetch(`${API_BASE_URL}/agents`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+      
+      console.log('Agents Response Status:', agentsResponse.status);
+      
+      if (!agentsResponse.ok) {
+        const errorText = await agentsResponse.text();
+        console.error('Agents Fetch Error:', errorText);
+        throw new Error(`Failed to load agents: ${errorText}`);
+      }
+      
+      const agentsData = await agentsResponse.json();
+      console.log('Agents Loaded:', agentsData.length);
       setAgents(agentsData);
+      
+      // Fetch assignments
+      const assignmentsResponse = await fetch(`${API_BASE_URL}/assignments`);
+      if (!assignmentsResponse.ok) {
+        throw new Error('Failed to load assignments');
+      }
+      const assignmentsData = await assignmentsResponse.json();
       setAssignments(assignmentsData);
-      setMessage('Data loaded successfully');
+      
+      setMessage('Data loaded successfully from server');
       setIsLoading(false);
     } catch (error) {
-      console.error('Error loading data:', error);
+      console.error('Comprehensive Error:', error);
       setMessage(`Error loading data: ${error.message}`);
       setIsLoading(false);
+      loadSampleData(); // Fallback to sample data
     }
   }, []);
-
+  
+  // Load data from server on component mount
   useEffect(() => {
     loadDataFromServer();
   }, [loadDataFromServer]);
+  
+  // Sample data loader (fallback)
+  const loadSampleData = () => {
+    console.log('Loading sample data as fallback...');
+    // Sample agents
+    setAgents([
+      { id: 1, name: "Aaron Dale Yaeso Bandong", role: "Item Review", capacity: 10, currentAssignments: [] },
+      { id: 2, name: "Aaron Marx Lenin Tuban Oriola", role: "Item Review", capacity: 10, currentAssignments: [] },
+      { id: 3, name: "Abel Alicaya Cabugnason", role: "Item Review", capacity: 10, currentAssignments: [] },
+      { id: 4, name: "Adam Paul Medina Baliguat", role: "Item Review", capacity: 10, currentAssignments: [] },
+      { id: 5, name: "Aileen Punsalan Dionisio", role: "Item Review", capacity: 10, currentAssignments: [] }
+    ]);
+    
+    // Sample products
+    setProducts([
+      { id: "6TBLDVZTR0H4", itemId: 15847619937, name: "Girl's Hoodie Long Sleeve Soft Sweatshirt", priority: "P3", createdOn: "2025-03-31 00:00:03", assigned: false },
+      { id: "7AV4W07EGKBV", itemId: 15895965957, name: "Cute Hoodies For Teen Girls Trendy Preppy", priority: "P3", createdOn: "2025-03-31 00:00:05", assigned: false },
+      { id: "9KLTW5Z8MQPX", itemId: 15847689402, name: "Winter Jacket Men Warm Padded Parka", priority: "P2", createdOn: "2025-03-31 00:00:07", assigned: false }
+    ]);
+  };
 
-  // File upload handler
-  const handleFileUpload = async (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-    
-    // Reset the file input
-    event.target.value = null;
-    
-    setUploadSuccess(false);
+  // Assign a task to an agent
+  const assignTask = async (agentId) => {
     setIsLoading(true);
-    setLoadingMessage('Uploading output.csv file...');
-    
-    // Create form data
-    const formData = new FormData();
-    formData.append('outputFile', file);
+    setLoadingMessage('Assigning task...');
     
     try {
-      const response = await fetch(`${API_BASE_URL}/upload-output`, {
+      // Call the server API to assign a task
+      const response = await fetch(`${API_BASE_URL}/assign`, {
         method: 'POST',
-        body: formData,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ agentId }),
       });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Upload failed: ${errorText}`);
-      }
       
       const result = await response.json();
-      setMessage(result.message);
-      setUploadSuccess(true);
       
-      // Reload data after successful upload
-      await loadDataFromServer();
-    } catch (error) {
-      console.error('Error uploading file:', error);
-      setMessage(`Error uploading file: ${error.message}`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleRefreshData = async () => {
-    setIsLoading(true);
-    setLoadingMessage('Refreshing data from server...');
-    try {
-      const refreshRes = await fetch(`${API_BASE_URL}/refresh`, { method: 'POST' });
-      if (!refreshRes.ok) {
-        const errText = await refreshRes.text();
-        throw new Error(`Failed to refresh data: ${errText}`);
-      }
-      await loadDataFromServer();
-      setMessage('Data refreshed successfully');
-    } catch (error) {
-      console.error('Error refreshing data:', error);
-      setMessage(`Error refreshing data: ${error.message}`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const requestTask = async (agentId) => {
-    setIsLoading(true);
-    setLoadingMessage('Requesting task...');
-    try {
-      const res = await fetch(`${API_BASE_URL}/assign`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agentId })
-      });
-      const result = await res.json();
-      if (!res.ok) {
+      if (!response.ok) {
         throw new Error(result.error || 'Failed to assign task');
       }
+      
+      // Refresh data after assignment
       await loadDataFromServer();
       setMessage(result.message);
     } catch (error) {
-      console.error('Error requesting task:', error);
-      setMessage(`Error requesting task: ${error.message}`);
+      console.error('Error assigning task:', error);
+      setMessage(`Error assigning task: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Complete a task
   const completeTask = async (agentId, productId) => {
     setIsLoading(true);
     setLoadingMessage('Completing task...');
+    
     try {
-      const res = await fetch(`${API_BASE_URL}/complete`, {
+      // Call the server API to complete a task
+      const response = await fetch(`${API_BASE_URL}/complete`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agentId, productId })
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ agentId, productId }),
       });
-      const result = await res.json();
-      if (!res.ok) {
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
         throw new Error(result.error || 'Failed to complete task');
       }
+      
+      // Refresh data after completion
       await loadDataFromServer();
       setMessage(result.message);
     } catch (error) {
@@ -162,381 +176,108 @@ function App() {
     }
   };
 
-  const unassignProduct = async (productId) => {
-    setIsLoading(true);
-    setLoadingMessage('Unassigning product...');
-    try {
-      const res = await fetch(`${API_BASE_URL}/unassign-product`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productId })
-      });
-      const result = await res.json();
-      if (!res.ok) {
-        throw new Error(result.error || 'Failed to unassign product');
-      }
-      await loadDataFromServer();
-      setMessage(result.message);
-    } catch (error) {
-      console.error('Error unassigning product:', error);
-      setMessage(`Error unassigning product: ${error.message}`);
-    } finally {
-      setIsLoading(false);
-      setConfirmDialog({ show: false, title: '', message: '', onConfirm: null });
-    }
+  // Handle manual data refresh
+  const handleRefreshData = () => {
+    loadDataFromServer();
   };
 
-  const unassignAgentTasks = async (agentId) => {
-    setIsLoading(true);
-    setLoadingMessage('Unassigning agent tasks...');
-    try {
-      const res = await fetch(`${API_BASE_URL}/unassign-agent`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agentId })
-      });
-      const result = await res.json();
-      if (!res.ok) {
-        throw new Error(result.error || 'Failed to unassign agent tasks');
-      }
-      await loadDataFromServer();
-      setMessage(result.message);
-    } catch (error) {
-      console.error('Error unassigning agent tasks:', error);
-      setMessage(`Error unassigning agent tasks: ${error.message}`);
-    } finally {
-      setIsLoading(false);
-      setConfirmDialog({ show: false, title: '', message: '', onConfirm: null });
-    }
-  };
+  // Filter agents by search term
+  const filteredAgents = agents.filter(agent => 
+    agent.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-  const unassignAllTasks = async () => {
-    setIsLoading(true);
-    setLoadingMessage('Unassigning all tasks...');
-    try {
-      const res = await fetch(`${API_BASE_URL}/unassign-all`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      const result = await res.json();
-      if (!res.ok) {
-        throw new Error(result.error || 'Failed to unassign all tasks');
-      }
-      await loadDataFromServer();
-      setMessage(result.message);
-    } catch (error) {
-      console.error('Error unassigning all tasks:', error);
-      setMessage(`Error unassigning all tasks: ${error.message}`);
-    } finally {
-      setIsLoading(false);
-      setConfirmDialog({ show: false, title: '', message: '', onConfirm: null });
-    }
-  };
-
-  const loadCompletedTasks = async () => {
-    setIsLoading(true);
-    setLoadingMessage('Loading completed tasks...');
-    try {
-      const res = await fetch(`${API_BASE_URL}/completed-assignments`);
-      if (!res.ok) {
-        throw new Error('Failed to load completed tasks');
-      }
-      const data = await res.json();
-      setCompletedTasks(data);
-      setIsLoading(false);
-    } catch (error) {
-      console.error('Error loading completed tasks:', error);
-      setMessage(`Error loading completed tasks: ${error.message}`);
-      setIsLoading(false);
-    }
-  };
-
-  const downloadCompletedCSV = () => {
-    window.open(`${API_BASE_URL}/download/completed-assignments`, '_blank');
-  };
-
-  const loadUnassignedProducts = async () => {
-    setIsLoading(true);
-    setLoadingMessage('Loading unassigned products...');
-    try {
-      const res = await fetch(`${API_BASE_URL}/unassigned-products`);
-      if (!res.ok) {
-        throw new Error('Failed to load unassigned products');
-      }
-      const data = await res.json();
-      setUnassignedProducts(data);
-      setIsLoading(false);
-    } catch (error) {
-      console.error('Error loading unassigned products:', error);
-      setMessage(`Error loading unassigned products: ${error.message}`);
-      setIsLoading(false);
-    }
-  };
-
-  const downloadUnassignedCSV = () => {
-    window.open(`${API_BASE_URL}/download/unassigned-products`, '_blank');
-  };
-
-  const handleViewChange = (newView) => {
-    setView(newView);
-    if (newView === 'completed') {
-      loadCompletedTasks();
-    } else if (newView === 'unassigned') {
-      loadUnassignedProducts();
-    }
-  };
-
-  // Show confirm dialog
-  const showConfirmDialog = (title, message, onConfirm) => {
-    setConfirmDialog({ show: true, title, message, onConfirm });
-  };
-
-  // Render confirmation dialog
-  const renderConfirmDialog = () => {
-    if (!confirmDialog.show) return null;
-    
-    return (
-      <div className="confirm-overlay">
-        <div className="confirm-dialog">
-          <h3>{confirmDialog.title}</h3>
-          <p>{confirmDialog.message}</p>
-          <div className="confirm-buttons">
-            <button 
-              onClick={() => setConfirmDialog({ show: false, title: '', message: '', onConfirm: null })}
-              className="cancel-button"
-            >
-              Cancel
-            </button>
-            <button 
-              onClick={confirmDialog.onConfirm}
-              className="confirm-button"
-            >
-              Confirm
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
+  // Render the agent dashboard
   const renderAgentDashboard = () => {
     const agent = agents.find(a => a.id === selectedAgent);
-    if (!agent) return <div>Select an agent to view their dashboard.</div>;
+    if (!agent) return <div>Select an agent to view their dashboard</div>;
+    
     return (
       <div className="agent-dashboard">
-        <button className="back-button" onClick={() => setSelectedAgent(null)}>Back to Agent List</button>
-        <h2>{agent.name} - Dashboard</h2>
-        <p>{agent.role} • {agent.currentAssignments.length} / {agent.capacity} tasks</p>
-        <div className="button-group">
-          <button className="request-button" onClick={() => requestTask(agent.id)} disabled={isLoading || agent.currentAssignments.length >= agent.capacity}>
-            {isLoading ? "Processing..." : agent.currentAssignments.length >= agent.capacity ? "Queue Full" : "Request Task"}
-          </button>
-          {agent.currentAssignments.length > 0 && (
-            <button 
-              className="unassign-button" 
-              onClick={() => showConfirmDialog(
-                "Unassign All Tasks", 
-                `Are you sure you want to unassign all tasks from ${agent.name}?`,
-                () => unassignAgentTasks(agent.id)
-              )} 
-              disabled={isLoading}
-            >
-              Unassign All (Agent)
-            </button>
-          )}
+        <div className="agent-header">
+          <h2>{agent.name}</h2>
+          <p>{agent.role} • {agent.currentAssignments.length}/{agent.capacity} tasks</p>
         </div>
-        {agent.currentAssignments.length > 0 ? (
-          <table className="assignments-table">
-            <thead>
-              <tr>
-                <th>Abstract ID</th>
-                <th>Count</th>
-                <th>Tenant ID</th>
-                <th>Priority</th>
-                <th>Created On</th>
-                <th>Assigned On</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {agent.currentAssignments.map(task => (
-                <tr key={task.assignmentId || task.productId}>
-                  <td>{task.productId}</td>
-                  <td>{task.count}</td>
-                  <td>{task.tenantId || 'N/A'}</td>
-                  <td>
-                    <span className={`priority-tag priority-${task.priority}`}>
-                      {task.priority}
-                    </span>
-                  </td>
-                  <td>{task.createdOn || 'N/A'}</td>
-                  <td>{task.assignedOn || 'N/A'}</td>
-                  <td>
-                    <div className="action-buttons">
-                      <button className="complete-button" onClick={() => completeTask(agent.id, task.productId)} disabled={isLoading}>
-                        Complete
-                      </button>
+        
+        <div className="dashboard-grid">
+          <div className="request-section">
+            <h3>Request Task</h3>
+            <button 
+              onClick={() => assignTask(agent.id)}
+              disabled={agent.currentAssignments.length >= agent.capacity || isLoading}
+              className="request-button"
+            >
+              {isLoading ? "Processing..." : 
+                agent.currentAssignments.length >= agent.capacity ? "Queue Full" : "Request Task"}
+            </button>
+          </div>
+          
+          <div className="status-section">
+            <h3>Current Status</h3>
+            <div>
+              <div className="status-row">
+                <span>Task Queue</span>
+                <span>{agent.currentAssignments.length}/{agent.capacity}</span>
+              </div>
+              <div className="progress-bar">
+                <div 
+                  className="progress-fill"
+                  style={{ width: `${(agent.currentAssignments.length / agent.capacity) * 100}%` }}
+                ></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div className="assignments-section">
+          <h3>Current Assignments</h3>
+          
+          {agent.currentAssignments.length > 0 ? (
+            <table className="assignments-table">
+              <thead>
+                <tr>
+                  <th>Product ID</th>
+                  <th>Item ID</th>
+                  <th>Item</th>
+                  <th>Priority</th>
+                  <th>Tenant ID</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {agent.currentAssignments.map(task => (
+                  <tr key={task.productId}>
+                    <td>{task.productId}</td>
+                    <td>{task.itemId}</td>
+                    <td className="item-name">{task.name}</td>
+                    <td>
+                      <span className={`priority-tag priority-${task.priority}`}>
+                        {task.priority}
+                      </span>
+                    </td>
+                    <td>{task.tenantId || 'N/A'}</td>
+                    <td>
                       <button 
-                        className="unassign-task-button" 
-                        onClick={() => showConfirmDialog(
-                          "Unassign Task", 
-                          `Are you sure you want to unassign Abstract ID ${task.productId}?`,
-                          () => unassignProduct(task.productId)
-                        )} 
+                        onClick={() => completeTask(agent.id, task.productId)}
+                        className="complete-button"
                         disabled={isLoading}
                       >
-                        Unassign
+                        {isLoading ? "Processing..." : "Complete"}
                       </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        ) : (
-          <p className="no-tasks">No tasks assigned yet.</p>
-        )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <p className="no-tasks">No tasks assigned yet</p>
+          )}
+        </div>
       </div>
     );
   };
 
-  const renderAgentList = () => (
-    <div className="agent-list-section">
-      <div className="agent-list-header">
-        <h3>Agent Directory</h3>
-        <div className="search-box">
-          <input
-            type="text"
-            placeholder="Search agents..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-      </div>
-      <table className="agents-table">
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Role</th>
-            <th>Workload</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {agents.filter(agent => agent.name.toLowerCase().includes(searchTerm.toLowerCase())).map(agent => (
-            <tr key={agent.id}>
-              <td>{agent.name}</td>
-              <td>{agent.role}</td>
-              <td>
-                <div className="workload-bar">
-                  <div className="workload-fill" style={{ width: `${(agent.currentAssignments.length / agent.capacity) * 100}%` }}></div>
-                </div>
-                <span className="workload-text">{agent.currentAssignments.length}/{agent.capacity}</span>
-              </td>
-              <td className="agent-action-buttons">
-                <button className="view-button" onClick={() => setSelectedAgent(agent.id)} disabled={isLoading}>
-                  View Dashboard
-                </button>
-                {agent.currentAssignments.length > 0 && (
-                  <button 
-                    className="unassign-button" 
-                    onClick={() => showConfirmDialog(
-                      "Unassign All Tasks", 
-                      `Are you sure you want to unassign all tasks from ${agent.name}?`,
-                      () => unassignAgentTasks(agent.id)
-                    )} 
-                    disabled={isLoading}
-                  >
-                    Unassign All
-                  </button>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-
-  const renderCompletedTasks = () => (
-    <div className="agent-dashboard">
-      <div className="view-nav">
-        <button className="back-button" onClick={() => setView('agents')}>Back to Dashboard</button>
-        <h2>Completed Tasks</h2>
-      </div>
-      <button onClick={downloadCompletedCSV} disabled={isLoading} className="download-button">
-        Download CSV
-      </button>
-      {completedTasks.length > 0 ? (
-        <table className="assignments-table">
-          <thead>
-            <tr>
-              <th>Assignment ID</th>
-              <th>Agent ID</th>
-              <th>Product ID</th>
-              <th>Assigned On</th>
-              <th>Completed On</th>
-            </tr>
-          </thead>
-          <tbody>
-            {completedTasks.map(task => (
-              <tr key={task.id}>
-                <td>{task.id}</td>
-                <td>{task.agentId}</td>
-                <td>{task.productId}</td>
-                <td>{task.assignedOn}</td>
-                <td>{task.completedOn}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      ) : (
-        <p className="no-tasks">No completed tasks found.</p>
-      )}
-    </div>
-  );
-
-  const renderUnassignedProducts = () => (
-    <div className="agent-dashboard">
-      <div className="view-nav">
-        <button className="back-button" onClick={() => setView('agents')}>Back to Dashboard</button>
-        <h2>Unassigned Products</h2>
-      </div>
-      <button onClick={downloadUnassignedCSV} disabled={isLoading} className="download-button">
-        Download CSV
-      </button>
-      {unassignedProducts.length > 0 ? (
-        <table className="assignments-table">
-          <thead>
-            <tr>
-              <th>Abstract ID</th>
-              <th>Count</th>
-              <th>Tenant ID</th>
-              <th>Priority</th>
-              <th>Created On</th>
-            </tr>
-          </thead>
-          <tbody>
-            {unassignedProducts.map(p => (
-              <tr key={p.id}>
-                <td>{p.id}</td>
-                <td>{p.count}</td>
-                <td>{p.tenantId}</td>
-                <td>{p.priority}</td>
-                <td>{p.createdOn}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      ) : (
-        <p className="no-tasks">No unassigned products found.</p>
-      )}
-    </div>
-  );
-
+  // Render the main dashboard
   const renderDashboard = () => {
-    if (view === 'completed') return renderCompletedTasks();
-    if (view === 'unassigned') return renderUnassignedProducts();
     return (
       <div className="dashboard">
         <div className="status-cards">
@@ -551,68 +292,123 @@ function App() {
               <span>{products.length}</span>
             </div>
             <div className="status-item">
+              <span>Unassigned Products:</span>
+              <span>{products.filter(p => !p.assigned).length}</span>
+            </div>
+            <div className="status-item">
               <span>Total Assignments:</span>
               <span>{assignments.length}</span>
             </div>
-            
-            {/* File Upload Section */}
-            <div className="file-upload-section">
-              <h4>Upload New Output CSV</h4>
-              <div className="file-input-container">
-                <input
-                  type="file"
-                  id="output-csv"
-                  accept=".csv"
-                  onChange={handleFileUpload}
-                  disabled={isLoading}
-                  className="file-input"
-                />
-                <label htmlFor="output-csv" className={`file-label ${uploadSuccess ? 'upload-success' : ''}`}>
-                  {uploadSuccess ? '✓ File Uploaded' : 'Choose File'}
-                </label>
-              </div>
-              <p className="file-help-text">Select output.csv to update products without redeploying</p>
+            <button 
+              onClick={handleRefreshData} 
+              className="refresh-button"
+              disabled={isLoading}
+            >
+              {isLoading ? "Refreshing..." : "Refresh Data"}
+            </button>
+          </div>
+          
+          <div className="status-card">
+            <h3>Server Information</h3>
+            <div className="status-item">
+              <span>Server Status:</span>
+              <span className={isLoading ? "status-loading" : "status-online"}>
+                {isLoading ? "Loading..." : "Online"}
+              </span>
             </div>
-
-            <div className="button-group">
-              <button className="refresh-button" onClick={handleRefreshData} disabled={isLoading}>
-                {isLoading ? "Refreshing..." : "Refresh Data"}
-              </button>
-              {assignments.length > 0 && (
-                <button 
-                  className="unassign-all-button" 
-                  onClick={() => showConfirmDialog(
-                    "Unassign All Tasks", 
-                    "Are you sure you want to unassign ALL tasks from ALL agents?",
-                    unassignAllTasks
-                  )} 
-                  disabled={isLoading}
-                >
-                  Unassign All Tasks
-                </button>
-              )}
+            <div className="status-item">
+              <span>Auto Updates:</span>
+              <span>Daily at 1:00 AM</span>
             </div>
-            <div className="button-group" style={{ marginTop: '15px' }}>
-              <button onClick={() => { setView('completed'); loadCompletedTasks(); }} className="view-button" disabled={isLoading}>
-                View Completed Tasks
-              </button>
-              <button onClick={() => { setView('unassigned'); loadUnassignedProducts(); }} className="view-button" disabled={isLoading}>
-                View Unassigned Products
-              </button>
+            <div className="status-item">
+              <span>Data Source:</span>
+              <span>Network Drive</span>
+            </div>
+            <div className="info-message">
+              <p>The system automatically loads product data and agent roster.</p>
             </div>
           </div>
         </div>
-        {selectedAgent ? renderAgentDashboard() : renderAgentList()}
+        
+        {selectedAgent ? (
+          <div>
+            <button 
+              onClick={() => setSelectedAgent(null)}
+              className="back-button"
+            >
+              Back to agent list
+            </button>
+            {renderAgentDashboard()}
+          </div>
+        ) : (
+          <div className="agent-list-section">
+            <div className="agent-list-header">
+              <h3>Agent Directory</h3>
+              <div className="search-box">
+                <input
+                  type="text"
+                  placeholder="Search agents..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+            </div>
+            
+            <table className="agents-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Role</th>
+                  <th>Workload</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredAgents.map((agent) => (
+                  <tr key={agent.id}>
+                    <td>{agent.name}</td>
+                    <td>{agent.role}</td>
+                    <td>
+                      <div className="workload-bar">
+                        <div 
+                          className="workload-fill"
+                          style={{ width: `${(agent.currentAssignments.length / agent.capacity) * 100}%` }}
+                        ></div>
+                      </div>
+                      <span className="workload-text">
+                        {agent.currentAssignments.length}/{agent.capacity}
+                      </span>
+                    </td>
+                    <td>
+                      <button 
+                        onClick={() => setSelectedAgent(agent.id)} 
+                        className="view-button"
+                      >
+                        View Dashboard
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     );
   };
 
+  // Main render function
   return (
     <div className="app">
       <header className="app-header">
-        <h1>Product Assignment System</h1>
-        {message && <div className="message">{message}</div>}
+        <h1>Product ID Assignment System</h1>
+        {message && (
+          <div className="message">
+            {message}
+          </div>
+        )}
       </header>
+
       <main className="app-content">
         {isLoading && (
           <div className="loading-overlay">
@@ -622,8 +418,8 @@ function App() {
             </div>
           </div>
         )}
+        
         {renderDashboard()}
-        {renderConfirmDialog()}
       </main>
     </div>
   );
