@@ -21,6 +21,7 @@ function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [loadingMessage, setLoadingMessage] = useState('Loading data...');
+  const [confirmDialog, setConfirmDialog] = useState({ show: false, title: '', message: '', onConfirm: null });
   
   // Function to load data from server (using useCallback to prevent dependency issues)
   const loadDataFromServer = useCallback(async () => {
@@ -176,15 +177,143 @@ function App() {
     }
   };
 
+  // Unassign all tasks from all agents
+  const unassignAllTasks = async () => {
+    setIsLoading(true);
+    setLoadingMessage('Unassigning all tasks...');
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/unassign-all`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to unassign all tasks');
+      }
+      
+      // Refresh data
+      await loadDataFromServer();
+      setMessage(result.message);
+    } catch (error) {
+      console.error('Error unassigning all tasks:', error);
+      setMessage(`Error unassigning all tasks: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+      setConfirmDialog({ show: false, title: '', message: '', onConfirm: null });
+    }
+  };
+
+  // Unassign all tasks from a specific agent
+  const unassignAgentTasks = async (agentId) => {
+    setIsLoading(true);
+    setLoadingMessage('Unassigning agent tasks...');
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/unassign-agent`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ agentId }),
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to unassign agent tasks');
+      }
+      
+      // Refresh data
+      await loadDataFromServer();
+      setMessage(result.message);
+    } catch (error) {
+      console.error('Error unassigning agent tasks:', error);
+      setMessage(`Error unassigning agent tasks: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+      setConfirmDialog({ show: false, title: '', message: '', onConfirm: null });
+    }
+  };
+
+  // Unassign a specific product
+  const unassignProduct = async (productId) => {
+    setIsLoading(true);
+    setLoadingMessage('Unassigning product...');
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/unassign-product`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ productId }),
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to unassign product');
+      }
+      
+      // Refresh data
+      await loadDataFromServer();
+      setMessage(result.message);
+    } catch (error) {
+      console.error('Error unassigning product:', error);
+      setMessage(`Error unassigning product: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+      setConfirmDialog({ show: false, title: '', message: '', onConfirm: null });
+    }
+  };
+
   // Handle manual data refresh
   const handleRefreshData = () => {
     loadDataFromServer();
+  };
+
+  // Show confirm dialog
+  const showConfirmDialog = (title, message, onConfirm) => {
+    setConfirmDialog({ show: true, title, message, onConfirm });
   };
 
   // Filter agents by search term
   const filteredAgents = agents.filter(agent => 
     agent.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // Render confirmation dialog
+  const renderConfirmDialog = () => {
+    if (!confirmDialog.show) return null;
+    
+    return (
+      <div className="confirm-overlay">
+        <div className="confirm-dialog">
+          <h3>{confirmDialog.title}</h3>
+          <p>{confirmDialog.message}</p>
+          <div className="confirm-buttons">
+            <button 
+              onClick={() => setConfirmDialog({ show: false, title: '', message: '', onConfirm: null })}
+              className="cancel-button"
+            >
+              Cancel
+            </button>
+            <button 
+              onClick={confirmDialog.onConfirm}
+              className="confirm-button"
+            >
+              Confirm
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   // Render the agent dashboard
   const renderAgentDashboard = () => {
@@ -209,6 +338,20 @@ function App() {
               {isLoading ? "Processing..." : 
                 agent.currentAssignments.length >= agent.capacity ? "Queue Full" : "Request Task"}
             </button>
+            
+            {agent.currentAssignments.length > 0 && (
+              <button 
+                onClick={() => showConfirmDialog(
+                  "Unassign All Tasks", 
+                  `Are you sure you want to unassign all tasks from ${agent.name}?`,
+                  () => unassignAgentTasks(agent.id)
+                )}
+                className="unassign-button"
+                disabled={isLoading}
+              >
+                Unassign All Tasks
+              </button>
+            )}
           </div>
           
           <div className="status-section">
@@ -256,13 +399,28 @@ function App() {
                     <td>{task.createdOn || 'N/A'}</td>
                     <td>{task.count || 1}</td>
                     <td>
-                      <button 
-                        onClick={() => completeTask(agent.id, task.productId)}
-                        className="complete-button"
-                        disabled={isLoading}
-                      >
-                        {isLoading ? "Processing..." : "Complete"}
-                      </button>
+                      <div className="action-buttons">
+                        <button 
+                          onClick={() => completeTask(agent.id, task.productId)}
+                          className="complete-button"
+                          disabled={isLoading}
+                          title="Complete this task"
+                        >
+                          {isLoading ? "..." : "Complete"}
+                        </button>
+                        <button 
+                          onClick={() => showConfirmDialog(
+                            "Unassign Task", 
+                            `Are you sure you want to unassign Abstract ID ${task.productId}?`,
+                            () => unassignProduct(task.productId)
+                          )}
+                          className="unassign-task-button"
+                          disabled={isLoading}
+                          title="Unassign this task"
+                        >
+                          Unassign
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -299,13 +457,29 @@ function App() {
               <span>Total Assignments:</span>
               <span>{assignments.length}</span>
             </div>
-            <button 
-              onClick={handleRefreshData} 
-              className="refresh-button"
-              disabled={isLoading}
-            >
-              {isLoading ? "Refreshing..." : "Refresh Data"}
-            </button>
+            <div className="button-group">
+              <button 
+                onClick={handleRefreshData} 
+                className="refresh-button"
+                disabled={isLoading}
+              >
+                {isLoading ? "Refreshing..." : "Refresh Data"}
+              </button>
+              
+              {assignments.length > 0 && (
+                <button 
+                  onClick={() => showConfirmDialog(
+                    "Unassign All Tasks", 
+                    "Are you sure you want to unassign ALL tasks from ALL agents?",
+                    unassignAllTasks
+                  )}
+                  className="unassign-all-button"
+                  disabled={isLoading}
+                >
+                  Unassign All Tasks
+                </button>
+              )}
+            </div>
           </div>
           
           <div className="status-card">
@@ -380,12 +554,27 @@ function App() {
                       </span>
                     </td>
                     <td>
-                      <button 
-                        onClick={() => setSelectedAgent(agent.id)} 
-                        className="view-button"
-                      >
-                        View Dashboard
-                      </button>
+                      <div className="agent-action-buttons">
+                        <button 
+                          onClick={() => setSelectedAgent(agent.id)} 
+                          className="view-button"
+                        >
+                          View Dashboard
+                        </button>
+                        {agent.currentAssignments.length > 0 && (
+                          <button 
+                            onClick={() => showConfirmDialog(
+                              "Unassign All Tasks", 
+                              `Are you sure you want to unassign all tasks from ${agent.name}?`,
+                              () => unassignAgentTasks(agent.id)
+                            )}
+                            className="unassign-button"
+                            disabled={isLoading}
+                          >
+                            Unassign All
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -420,6 +609,7 @@ function App() {
         )}
         
         {renderDashboard()}
+        {renderConfirmDialog()}
       </main>
     </div>
   );
