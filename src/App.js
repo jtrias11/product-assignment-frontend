@@ -111,6 +111,70 @@ function App() {
     ]);
   };
 
+  // Assign a task to an agent
+  const assignTask = async (agentId) => {
+    setIsLoading(true);
+    setLoadingMessage('Assigning task...');
+    
+    try {
+      // Call the server API to assign a task
+      const response = await fetch(`${API_BASE_URL}/assign`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ agentId }),
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to assign task');
+      }
+      
+      // Refresh data after assignment
+      await loadDataFromServer();
+      setMessage(result.message);
+    } catch (error) {
+      console.error('Error assigning task:', error);
+      setMessage(`Error assigning task: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Complete a task
+  const completeTask = async (agentId, productId) => {
+    setIsLoading(true);
+    setLoadingMessage('Completing task...');
+    
+    try {
+      // Call the server API to complete a task
+      const response = await fetch(`${API_BASE_URL}/complete`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ agentId, productId }),
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to complete task');
+      }
+      
+      // Refresh data after completion
+      await loadDataFromServer();
+      setMessage(result.message);
+    } catch (error) {
+      console.error('Error completing task:', error);
+      setMessage(`Error completing task: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Handle manual data refresh
   const handleRefreshData = () => {
     loadDataFromServer();
