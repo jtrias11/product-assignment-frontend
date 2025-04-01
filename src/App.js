@@ -21,6 +21,8 @@ function App() {
   const [view, setView] = useState('agents'); // "agents", "completed", "unassigned"
   const [completedTasks, setCompletedTasks] = useState([]);
   const [unassignedProducts, setUnassignedProducts] = useState([]);
+  const [confirmDialog, setConfirmDialog] = useState({ show: false, title: '', message: '', onConfirm: null });
+  const [uploadSuccess, setUploadSuccess] = useState(false);
 
   const loadDataFromServer = useCallback(async () => {
     setIsLoading(true);
@@ -53,6 +55,47 @@ function App() {
   useEffect(() => {
     loadDataFromServer();
   }, [loadDataFromServer]);
+
+  // File upload handler
+  const handleFileUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    // Reset the file input
+    event.target.value = null;
+    
+    setUploadSuccess(false);
+    setIsLoading(true);
+    setLoadingMessage('Uploading output.csv file...');
+    
+    // Create form data
+    const formData = new FormData();
+    formData.append('outputFile', file);
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/upload-output`, {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Upload failed: ${errorText}`);
+      }
+      
+      const result = await response.json();
+      setMessage(result.message);
+      setUploadSuccess(true);
+      
+      // Reload data after successful upload
+      await loadDataFromServer();
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      setMessage(`Error uploading file: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleRefreshData = async () => {
     setIsLoading(true);
@@ -139,6 +182,7 @@ function App() {
       setMessage(`Error unassigning product: ${error.message}`);
     } finally {
       setIsLoading(false);
+      setConfirmDialog({ show: false, title: '', message: '', onConfirm: null });
     }
   };
 
@@ -162,6 +206,7 @@ function App() {
       setMessage(`Error unassigning agent tasks: ${error.message}`);
     } finally {
       setIsLoading(false);
+      setConfirmDialog({ show: false, title: '', message: '', onConfirm: null });
     }
   };
 
@@ -184,6 +229,7 @@ function App() {
       setMessage(`Error unassigning all tasks: ${error.message}`);
     } finally {
       setIsLoading(false);
+      setConfirmDialog({ show: false, title: '', message: '', onConfirm: null });
     }
   };
 
@@ -240,6 +286,39 @@ function App() {
     }
   };
 
+  // Show confirm dialog
+  const showConfirmDialog = (title, message, onConfirm) => {
+    setConfirmDialog({ show: true, title, message, onConfirm });
+  };
+
+  // Render confirmation dialog
+  const renderConfirmDialog = () => {
+    if (!confirmDialog.show) return null;
+    
+    return (
+      <div className="confirm-overlay">
+        <div className="confirm-dialog">
+          <h3>{confirmDialog.title}</h3>
+          <p>{confirmDialog.message}</p>
+          <div className="confirm-buttons">
+            <button 
+              onClick={() => setConfirmDialog({ show: false, title: '', message: '', onConfirm: null })}
+              className="cancel-button"
+            >
+              Cancel
+            </button>
+            <button 
+              onClick={confirmDialog.onConfirm}
+              className="confirm-button"
+            >
+              Confirm
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderAgentDashboard = () => {
     const agent = agents.find(a => a.id === selectedAgent);
     if (!agent) return <div>Select an agent to view their dashboard.</div>;
@@ -249,12 +328,22 @@ function App() {
         <h2>{agent.name} - Dashboard</h2>
         <p>{agent.role} • {agent.currentAssignments.length} / {agent.capacity} tasks</p>
         <div className="button-group">
-          <button className="request-button" onClick={() => requestTask(agent.id)} disabled={isLoading}>
-            {isLoading ? "Processing..." : "Request Task"}
+          <button className="request-button" onClick={() => requestTask(agent.id)} disabled={isLoading || agent.currentAssignments.length >= agent.capacity}>
+            {isLoading ? "Processing..." : agent.currentAssignments.length >= agent.capacity ? "Queue Full" : "Request Task"}
           </button>
-          <button className="unassign-button" onClick={() => unassignAgentTasks(agent.id)} disabled={isLoading}>
-            Unassign All (Agent)
-          </button>
+          {agent.currentAssignments.length > 0 && (
+            <button 
+              className="unassign-button" 
+              onClick={() => showConfirmDialog(
+                "Unassign All Tasks", 
+                `Are you sure you want to unassign all tasks from ${agent.name}?`,
+                () => unassignAgentTasks(agent.id)
+              )} 
+              disabled={isLoading}
+            >
+              Unassign All (Agent)
+            </button>
+          )}
         </div>
         {agent.currentAssignments.length > 0 ? (
           <table className="assignments-table">
@@ -271,11 +360,15 @@ function App() {
             </thead>
             <tbody>
               {agent.currentAssignments.map(task => (
-                <tr key={task.assignmentId}>
+                <tr key={task.assignmentId || task.productId}>
                   <td>{task.productId}</td>
                   <td>{task.count}</td>
-                  <td>{task.tenantId}</td>
-                  <td>{task.priority}</td>
+                  <td>{task.tenantId || 'N/A'}</td>
+                  <td>
+                    <span className={`priority-tag priority-${task.priority}`}>
+                      {task.priority}
+                    </span>
+                  </td>
                   <td>{task.createdOn || 'N/A'}</td>
                   <td>{task.assignedOn || 'N/A'}</td>
                   <td>
@@ -283,7 +376,15 @@ function App() {
                       <button className="complete-button" onClick={() => completeTask(agent.id, task.productId)} disabled={isLoading}>
                         Complete
                       </button>
-                      <button className="unassign-task-button" onClick={() => unassignProduct(task.productId)} disabled={isLoading}>
+                      <button 
+                        className="unassign-task-button" 
+                        onClick={() => showConfirmDialog(
+                          "Unassign Task", 
+                          `Are you sure you want to unassign Abstract ID ${task.productId}?`,
+                          () => unassignProduct(task.productId)
+                        )} 
+                        disabled={isLoading}
+                      >
                         Unassign
                       </button>
                     </div>
@@ -332,10 +433,23 @@ function App() {
                 </div>
                 <span className="workload-text">{agent.currentAssignments.length}/{agent.capacity}</span>
               </td>
-              <td>
+              <td className="agent-action-buttons">
                 <button className="view-button" onClick={() => setSelectedAgent(agent.id)} disabled={isLoading}>
                   View Dashboard
                 </button>
+                {agent.currentAssignments.length > 0 && (
+                  <button 
+                    className="unassign-button" 
+                    onClick={() => showConfirmDialog(
+                      "Unassign All Tasks", 
+                      `Are you sure you want to unassign all tasks from ${agent.name}?`,
+                      () => unassignAgentTasks(agent.id)
+                    )} 
+                    disabled={isLoading}
+                  >
+                    Unassign All
+                  </button>
+                )}
               </td>
             </tr>
           ))}
@@ -346,8 +460,11 @@ function App() {
 
   const renderCompletedTasks = () => (
     <div className="agent-dashboard">
-      <h2>Completed Tasks</h2>
-      <button onClick={downloadCompletedCSV} disabled={isLoading} className="unassign-button">
+      <div className="view-nav">
+        <button className="back-button" onClick={() => setView('agents')}>Back to Dashboard</button>
+        <h2>Completed Tasks</h2>
+      </div>
+      <button onClick={downloadCompletedCSV} disabled={isLoading} className="download-button">
         Download CSV
       </button>
       {completedTasks.length > 0 ? (
@@ -381,8 +498,11 @@ function App() {
 
   const renderUnassignedProducts = () => (
     <div className="agent-dashboard">
-      <h2>Unassigned Products</h2>
-      <button onClick={downloadUnassignedCSV} disabled={isLoading} className="unassign-button">
+      <div className="view-nav">
+        <button className="back-button" onClick={() => setView('agents')}>Back to Dashboard</button>
+        <h2>Unassigned Products</h2>
+      </div>
+      <button onClick={downloadUnassignedCSV} disabled={isLoading} className="download-button">
         Download CSV
       </button>
       {unassignedProducts.length > 0 ? (
@@ -434,13 +554,43 @@ function App() {
               <span>Total Assignments:</span>
               <span>{assignments.length}</span>
             </div>
+            
+            {/* File Upload Section */}
+            <div className="file-upload-section">
+              <h4>Upload New Output CSV</h4>
+              <div className="file-input-container">
+                <input
+                  type="file"
+                  id="output-csv"
+                  accept=".csv"
+                  onChange={handleFileUpload}
+                  disabled={isLoading}
+                  className="file-input"
+                />
+                <label htmlFor="output-csv" className={`file-label ${uploadSuccess ? 'upload-success' : ''}`}>
+                  {uploadSuccess ? '✓ File Uploaded' : 'Choose File'}
+                </label>
+              </div>
+              <p className="file-help-text">Select output.csv to update products without redeploying</p>
+            </div>
+
             <div className="button-group">
               <button className="refresh-button" onClick={handleRefreshData} disabled={isLoading}>
                 {isLoading ? "Refreshing..." : "Refresh Data"}
               </button>
-              <button className="unassign-all-button" onClick={unassignAllTasks} disabled={isLoading}>
-                Unassign All Tasks
-              </button>
+              {assignments.length > 0 && (
+                <button 
+                  className="unassign-all-button" 
+                  onClick={() => showConfirmDialog(
+                    "Unassign All Tasks", 
+                    "Are you sure you want to unassign ALL tasks from ALL agents?",
+                    unassignAllTasks
+                  )} 
+                  disabled={isLoading}
+                >
+                  Unassign All Tasks
+                </button>
+              )}
             </div>
             <div className="button-group" style={{ marginTop: '15px' }}>
               <button onClick={() => { setView('completed'); loadCompletedTasks(); }} className="view-button" disabled={isLoading}>
@@ -473,6 +623,7 @@ function App() {
           </div>
         )}
         {renderDashboard()}
+        {renderConfirmDialog()}
       </main>
     </div>
   );
