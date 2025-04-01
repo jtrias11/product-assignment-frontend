@@ -22,7 +22,190 @@ function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadingMessage, setLoadingMessage] = useState('Loading data...');
   
-  // Previous methods remain the same...
+  // Load data from server on component mount
+  useEffect(() => {
+    loadDataFromServer();
+  }, []);
+  
+  // Function to load data from server
+  const loadDataFromServer = async () => {
+    setIsLoading(true);
+    setLoadingMessage('Loading data from server...');
+    
+    try {
+      // Fetch products with detailed error handling
+      console.log('Fetching products from:', `${API_BASE_URL}/products`);
+      const productsResponse = await fetch(`${API_BASE_URL}/products`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+      
+      console.log('Products Response Status:', productsResponse.status);
+      
+      if (!productsResponse.ok) {
+        const errorText = await productsResponse.text();
+        console.error('Products Fetch Error:', errorText);
+        throw new Error(`Failed to load products: ${errorText}`);
+      }
+      
+      const productsData = await productsResponse.json();
+      console.log('Products Loaded:', productsData.length);
+      setProducts(productsData);
+      
+      // Fetch agents with similar error handling
+      const agentsResponse = await fetch(`${API_BASE_URL}/agents`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+      
+      console.log('Agents Response Status:', agentsResponse.status);
+      
+      if (!agentsResponse.ok) {
+        const errorText = await agentsResponse.text();
+        console.error('Agents Fetch Error:', errorText);
+        throw new Error(`Failed to load agents: ${errorText}`);
+      }
+      
+      const agentsData = await agentsResponse.json();
+      console.log('Agents Loaded:', agentsData.length);
+      setAgents(agentsData);
+      
+      // Fetch assignments
+      const assignmentsResponse = await fetch(`${API_BASE_URL}/assignments`);
+      if (!assignmentsResponse.ok) {
+        throw new Error('Failed to load assignments');
+      }
+      const assignmentsData = await assignmentsResponse.json();
+      setAssignments(assignmentsData);
+      
+      setMessage('Data loaded successfully from server');
+      setIsLoading(false);
+    } catch (error) {
+      console.error('Comprehensive Error:', error);
+      setMessage(`Error loading data: ${error.message}`);
+      setIsLoading(false);
+      loadSampleData(); // Fallback to sample data
+    }
+  };
+  
+  // Sample data loader (fallback)
+  const loadSampleData = () => {
+    // Sample agents
+    setAgents([
+      { id: 1, name: "Aaron Dale Yaeso Bandong", role: "Item Review", capacity: 10, currentAssignments: [] },
+      { id: 2, name: "Aaron Marx Lenin Tuban Oriola", role: "Item Review", capacity: 10, currentAssignments: [] },
+      { id: 3, name: "Abel Alicaya Cabugnason", role: "Item Review", capacity: 10, currentAssignments: [] },
+      { id: 4, name: "Adam Paul Medina Baliguat", role: "Item Review", capacity: 10, currentAssignments: [] },
+      { id: 5, name: "Aileen Punsalan Dionisio", role: "Item Review", capacity: 10, currentAssignments: [] }
+    ]);
+    
+    // Sample products
+    setProducts([
+      { id: "6TBLDVZTR0H4", itemId: 15847619937, name: "Girl's Hoodie Long Sleeve Soft Sweatshirt", priority: "P3", createdOn: "2025-03-31 00:00:03", assigned: false },
+      { id: "7AV4W07EGKBV", itemId: 15895965957, name: "Cute Hoodies For Teen Girls Trendy Preppy", priority: "P3", createdOn: "2025-03-31 00:00:05", assigned: false },
+      { id: "9KLTW5Z8MQPX", itemId: 15847689402, name: "Winter Jacket Men Warm Padded Parka", priority: "P2", createdOn: "2025-03-31 00:00:07", assigned: false }
+    ]);
+  };
+
+  // Handle manual data refresh
+  const handleRefreshData = () => {
+    loadDataFromServer();
+  };
+
+  // Filter agents by search term
+  const filteredAgents = agents.filter(agent => 
+    agent.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Render the agent dashboard
+  const renderAgentDashboard = () => {
+    const agent = agents.find(a => a.id === selectedAgent);
+    if (!agent) return <div>Select an agent to view their dashboard</div>;
+    
+    return (
+      <div className="agent-dashboard">
+        <div className="agent-header">
+          <h2>{agent.name}</h2>
+          <p>{agent.role} • {agent.currentAssignments.length}/{agent.capacity} tasks</p>
+        </div>
+        
+        <div className="dashboard-grid">
+          <div className="request-section">
+            <h3>Request Task</h3>
+            <button 
+              onClick={() => assignTask(agent.id)}
+              disabled={agent.currentAssignments.length >= agent.capacity || isLoading}
+              className="request-button"
+            >
+              {isLoading ? "Processing..." : 
+                agent.currentAssignments.length >= agent.capacity ? "Queue Full" : "Request Task"}
+            </button>
+          </div>
+          
+          <div className="status-section">
+            <h3>Current Status</h3>
+            <div>
+              <div className="status-row">
+                <span>Task Queue</span>
+                <span>{agent.currentAssignments.length}/{agent.capacity}</span>
+              </div>
+              <div className="progress-bar">
+                <div 
+                  className="progress-fill"
+                  style={{ width: `${(agent.currentAssignments.length / agent.capacity) * 100}%` }}
+                ></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div className="assignments-section">
+          <h3>Current Assignments</h3>
+          
+          {agent.currentAssignments.length > 0 ? (
+            <table className="assignments-table">
+              <thead>
+                <tr>
+                  <th>Product ID</th>
+                  <th>Item</th>
+                  <th>Priority</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {agent.currentAssignments.map(task => (
+                  <tr key={task.productId}>
+                    <td>{task.productId}</td>
+                    <td className="item-name">{task.name}</td>
+                    <td>
+                      <span className={`priority-tag priority-${task.priority}`}>
+                        {task.priority}
+                      </span>
+                    </td>
+                    <td>
+                      <button 
+                        onClick={() => completeTask(agent.id, task.productId)}
+                        className="complete-button"
+                        disabled={isLoading}
+                      >
+                        {isLoading ? "Processing..." : "Complete"}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <p className="no-tasks">No tasks assigned yet</p>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   // Render the main dashboard
   const renderDashboard = () => {
