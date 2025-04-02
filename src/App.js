@@ -19,7 +19,8 @@ function App() {
   const [loadingMessage, setLoadingMessage] = useState('Loading data...');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedAgent, setSelectedAgent] = useState(null);
-  const [view, setView] = useState('agents'); // "agents", "completed", "available", "prev-assigned", "queue"
+  // views: agents, completed, available, unassigned, queue
+  const [view, setView] = useState('agents');
   const [completedTasks, setCompletedTasks] = useState([]);
   const [unassignedProducts, setUnassignedProducts] = useState([]);
   const [previouslyAssigned, setPreviouslyAssigned] = useState([]);
@@ -59,19 +60,14 @@ function App() {
     loadDataFromServer();
   }, [loadDataFromServer]);
 
-  // File upload handler – renamed to Manual Upload
+  // File upload handler using icon
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
-    
-    // Reset the file input
     event.target.value = null;
-    
     setUploadSuccess(false);
     setIsLoading(true);
     setLoadingMessage('Uploading CSV file and adding new products...');
-    
-    // Create form data
     const formData = new FormData();
     formData.append('outputFile', file);
     
@@ -80,18 +76,13 @@ function App() {
         method: 'POST',
         body: formData,
       });
-      
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(`Upload failed: ${errorText}`);
       }
-      
       const result = await response.json();
-      
       setMessage(result.message);
       setUploadSuccess(true);
-      
-      // Reload data after successful upload
       await loadDataFromServer();
     } catch (error) {
       console.error('Error uploading file:', error);
@@ -130,9 +121,7 @@ function App() {
         body: JSON.stringify({ agentId })
       });
       const result = await res.json();
-      if (!res.ok) {
-        throw new Error(result.error || 'Failed to assign task');
-      }
+      if (!res.ok) throw new Error(result.error || 'Failed to assign task');
       await loadDataFromServer();
       setMessage(result.message);
     } catch (error) {
@@ -153,9 +142,7 @@ function App() {
         body: JSON.stringify({ agentId, productId })
       });
       const result = await res.json();
-      if (!res.ok) {
-        throw new Error(result.error || 'Failed to complete task');
-      }
+      if (!res.ok) throw new Error(result.error || 'Failed to complete task');
       await loadDataFromServer();
       setMessage(result.message);
     } catch (error) {
@@ -176,9 +163,7 @@ function App() {
         body: JSON.stringify({ agentId })
       });
       const result = await res.json();
-      if (!res.ok) {
-        throw new Error(result.error || 'Failed to complete all tasks');
-      }
+      if (!res.ok) throw new Error(result.error || 'Failed to complete all tasks');
       await loadDataFromServer();
       setMessage(result.message);
     } catch (error) {
@@ -199,9 +184,7 @@ function App() {
         body: JSON.stringify({ productId, agentId })
       });
       const result = await res.json();
-      if (!res.ok) {
-        throw new Error(result.error || 'Failed to unassign product');
-      }
+      if (!res.ok) throw new Error(result.error || 'Failed to unassign product');
       await loadDataFromServer();
       setMessage(result.message);
     } catch (error) {
@@ -223,9 +206,7 @@ function App() {
         body: JSON.stringify({ agentId })
       });
       const result = await res.json();
-      if (!res.ok) {
-        throw new Error(result.error || 'Failed to unassign agent tasks');
-      }
+      if (!res.ok) throw new Error(result.error || 'Failed to unassign agent tasks');
       await loadDataFromServer();
       setMessage(result.message);
     } catch (error) {
@@ -246,9 +227,7 @@ function App() {
         headers: { 'Content-Type': 'application/json' }
       });
       const result = await res.json();
-      if (!res.ok) {
-        throw new Error(result.error || 'Failed to unassign all tasks');
-      }
+      if (!res.ok) throw new Error(result.error || 'Failed to unassign all tasks');
       await loadDataFromServer();
       setMessage(result.message);
     } catch (error) {
@@ -265,9 +244,7 @@ function App() {
     setLoadingMessage('Loading completed tasks...');
     try {
       const res = await fetch(`${API_BASE_URL}/completed-assignments`);
-      if (!res.ok) {
-        throw new Error('Failed to load completed tasks');
-      }
+      if (!res.ok) throw new Error('Failed to load completed tasks');
       const data = await res.json();
       setCompletedTasks(data);
       setIsLoading(false);
@@ -283,9 +260,7 @@ function App() {
     setLoadingMessage('Loading available products...');
     try {
       const res = await fetch(`${API_BASE_URL}/unassigned-products`);
-      if (!res.ok) {
-        throw new Error('Failed to load available products');
-      }
+      if (!res.ok) throw new Error('Failed to load available products');
       const data = await res.json();
       setUnassignedProducts(data);
       setIsLoading(false);
@@ -298,18 +273,16 @@ function App() {
 
   const loadPreviouslyAssigned = async () => {
     setIsLoading(true);
-    setLoadingMessage('Loading previously assigned tasks...');
+    setLoadingMessage('Loading unassigned tasks...');
     try {
       const res = await fetch(`${API_BASE_URL}/previously-assigned`);
-      if (!res.ok) {
-        throw new Error('Failed to load previously assigned tasks');
-      }
+      if (!res.ok) throw new Error('Failed to load unassigned tasks');
       const data = await res.json();
       setPreviouslyAssigned(data);
       setIsLoading(false);
     } catch (error) {
-      console.error('Error loading previously assigned tasks:', error);
-      setMessage(`Error loading previously assigned tasks: ${error.message}`);
+      console.error('Error loading unassigned tasks:', error);
+      setMessage(`Error loading unassigned tasks: ${error.message}`);
       setIsLoading(false);
     }
   };
@@ -319,9 +292,7 @@ function App() {
     setLoadingMessage('Loading queue...');
     try {
       const res = await fetch(`${API_BASE_URL}/queue`);
-      if (!res.ok) {
-        throw new Error('Failed to load product queue');
-      }
+      if (!res.ok) throw new Error('Failed to load product queue');
       const data = await res.json();
       setQueueProducts(data);
       setIsLoading(false);
@@ -350,15 +321,10 @@ function App() {
 
   const handleViewChange = (newView) => {
     setView(newView);
-    if (newView === 'completed') {
-      loadCompletedTasks();
-    } else if (newView === 'available') {
-      loadUnassignedProducts();
-    } else if (newView === 'prev-assigned') {
-      loadPreviouslyAssigned();
-    } else if (newView === 'queue') {
-      loadQueue();
-    }
+    if (newView === 'completed') loadCompletedTasks();
+    else if (newView === 'available') loadUnassignedProducts();
+    else if (newView === 'unassigned') loadPreviouslyAssigned();
+    else if (newView === 'queue') loadQueue();
   };
 
   // Show confirm dialog
@@ -369,7 +335,6 @@ function App() {
   // Render confirmation dialog
   const renderConfirmDialog = () => {
     if (!confirmDialog.show) return null;
-    
     return (
       <div className="confirm-overlay">
         <div className="confirm-dialog">
@@ -394,11 +359,17 @@ function App() {
     );
   };
 
-  // Render top header with navigation and manual upload (left/right)
+  // Render header with data upload icon on left and navigation on right.
   const renderHeader = () => (
     <header className="app-header">
       <div className="header-left">
         <div className="manual-upload">
+          <label htmlFor="output-csv" className="upload-icon">
+            {/* Inline SVG for upload icon */}
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="#fff" viewBox="0 0 24 24">
+              <path d="M5 20h14v-2H5v2zm7-18L5.33 9h3.84v4h6.66v-4h3.84L12 2z"/>
+            </svg>
+          </label>
           <input
             type="file"
             id="output-csv"
@@ -407,17 +378,14 @@ function App() {
             disabled={isLoading}
             className="file-input"
           />
-          <label htmlFor="output-csv" className={`file-label ${uploadSuccess ? 'upload-success' : ''}`}>
-            {uploadSuccess ? '✓ Uploaded' : 'Manual Upload'}
-          </label>
         </div>
       </div>
       <div className="header-right">
         <nav className="nav-choices">
           <button onClick={() => handleViewChange('completed')} disabled={isLoading}>Completed Tasks</button>
           <button onClick={() => handleViewChange('available')} disabled={isLoading}>Available Products</button>
-          <button onClick={() => handleViewChange('prev-assigned')} disabled={isLoading}>Prev Assigned</button>
-          <button onClick={() => handleViewChange('queue')} disabled={isLoading}>Queue Only</button>
+          <button onClick={() => handleViewChange('unassigned')} disabled={isLoading}>Unassigned Tasks</button>
+          <button onClick={() => handleViewChange('queue')} disabled={isLoading}>Queue</button>
         </nav>
       </div>
       {message && <div className="message">{message}</div>}
@@ -441,7 +409,7 @@ function App() {
               <button 
                 className="unassign-task-button action-btn"
                 onClick={() => showConfirmDialog(
-                  "Unassign Task", 
+                  "Unassign Tasks", 
                   `Are you sure you want to unassign all tasks from ${agent.name}?`,
                   () => unassignAgentTasks(agent.id)
                 )} 
@@ -585,21 +553,26 @@ function App() {
             <tr>
               <th>Assignment ID</th>
               <th>Agent ID</th>
+              <th>Completed By</th>
               <th>Product ID</th>
               <th>Assigned On</th>
               <th>Completed On</th>
             </tr>
           </thead>
           <tbody>
-            {completedTasks.map(task => (
-              <tr key={task.id}>
-                <td>{task.id}</td>
-                <td>{task.agentId}</td>
-                <td>{task.productId}</td>
-                <td>{task.assignedOn}</td>
-                <td>{task.completedOn}</td>
-              </tr>
-            ))}
+            {completedTasks.map(task => {
+              const agent = agents.find(ag => ag.id === task.agentId);
+              return (
+                <tr key={task.id}>
+                  <td>{task.id}</td>
+                  <td>{task.agentId}</td>
+                  <td>{agent ? agent.name : 'Unknown'}</td>
+                  <td>{task.productId}</td>
+                  <td>{task.assignedOn}</td>
+                  <td>{task.completedOn}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       ) : (
@@ -656,7 +629,7 @@ function App() {
     <div className="agent-dashboard">
       <div className="view-nav">
         <button className="back-button" onClick={() => setView('agents')}>Back to Dashboard</button>
-        <h2>Prev Assigned</h2>
+        <h2>Unassigned Tasks</h2>
       </div>
       <button onClick={downloadPreviouslyAssignedCSV} disabled={isLoading} className="download-button">
         Download CSV
@@ -693,7 +666,7 @@ function App() {
           </tbody>
         </table>
       ) : (
-        <p className="no-tasks">No previously assigned tasks found.</p>
+        <p className="no-tasks">No unassigned tasks found.</p>
       )}
     </div>
   );
@@ -702,7 +675,7 @@ function App() {
     <div className="agent-dashboard">
       <div className="view-nav">
         <button className="back-button" onClick={() => setView('agents')}>Back to Dashboard</button>
-        <h2>Queue Only</h2>
+        <h2>Queue</h2>
       </div>
       <button onClick={downloadQueueCSV} disabled={isLoading} className="download-button">
         Download CSV
@@ -753,7 +726,7 @@ function App() {
   const renderDashboard = () => {
     if (view === 'completed') return renderCompletedTasks();
     if (view === 'available') return renderUnassignedProducts();
-    if (view === 'prev-assigned') return renderPreviouslyAssigned();
+    if (view === 'unassigned') return renderPreviouslyAssigned();
     if (view === 'queue') return renderQueue();
     return (
       <div className="dashboard">
