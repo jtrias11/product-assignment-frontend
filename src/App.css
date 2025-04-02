@@ -1,17 +1,15 @@
-/* Base Styles */
+/* Base */
 body, html, .app {
   margin: 0;
   padding: 0;
   font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
 
-/* Light Mode */
+/* Light vs. Dark Mode */
 .light-mode {
   background-color: #fff;
   color: #000;
 }
-
-/* Dark Mode */
 .dark-mode {
   background-color: #000;
   color: #fff;
@@ -21,7 +19,7 @@ body, html, .app {
 .app-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start; /* hamburger + brand on the left */
   padding: 12px 20px;
   position: relative;
   border-bottom: 1px solid #ccc;
@@ -29,18 +27,27 @@ body, html, .app {
 
 .light-mode .app-header {
   background-color: #fff;
-  color: #000;
 }
-
 .dark-mode .app-header {
   background-color: #111;
-  color: #fff;
 }
 
-/* Header Left - Status/Brand */
-.header-left .status-area {
+.header-left {
   display: flex;
   align-items: center;
+}
+
+.hamburger-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  margin-right: 12px;
+}
+
+.hamburger-btn svg {
+  width: 24px;
+  height: 24px;
 }
 
 .brand-title {
@@ -49,42 +56,36 @@ body, html, .app {
   font-weight: bold;
 }
 
-/* Header Right - Hamburger */
-.hamburger-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 4px;
+/* Right side can be empty or used for something else */
+.header-right {
+  flex: 1;
+  display: flex;
+  justify-content: flex-end;
 }
 
-.hamburger-btn svg {
-  width: 24px;
-  height: 24px;
-}
-
-/* Side Menu (slides from right) */
+/* Side Menu (slides from left) */
 .side-menu {
   position: fixed;
   top: 0;
-  right: -240px;
+  left: -240px; /* hidden by default */
   width: 240px;
   height: 100vh;
   background-color: #fff;
   color: #000;
-  border-left: 1px solid #ccc;
+  border-right: 1px solid #ccc;
   padding: 20px;
-  transition: right 0.3s;
+  transition: left 0.3s;
   z-index: 2000;
 }
 
 .dark-mode .side-menu {
   background-color: #111;
   color: #fff;
-  border-left: 1px solid #333;
+  border-right: 1px solid #333;
 }
 
 .side-menu.open {
-  right: 0;
+  left: 0;
 }
 
 .close-menu-btn {
@@ -96,7 +97,6 @@ body, html, .app {
   margin-bottom: 10px;
 }
 
-/* Side Menu Navigation */
 .side-menu-nav button {
   display: block;
   width: 100%;
@@ -116,7 +116,12 @@ body, html, .app {
   color: #fff;
 }
 
-/* Menu Upload Section */
+/* Theme toggle in side menu */
+.theme-toggle-button {
+  margin-top: 10px;
+}
+
+/* CSV Upload in side menu */
 .menu-upload-section {
   margin-top: 20px;
   display: flex;
@@ -127,7 +132,6 @@ body, html, .app {
   display: flex;
   align-items: center;
   cursor: pointer;
-  color: #0d6efd;
   margin-bottom: 8px;
 }
 
@@ -135,45 +139,72 @@ body, html, .app {
   margin-left: 6px;
 }
 
-.menu-upload-section .upload-icon:hover {
-  background-color: #0d6efd;
-  color: #fff;
-  border-radius: 4px;
-  padding: 4px;
-}
-
 .file-input {
   display: none;
 }
 
-/* Side Menu Theme Toggle & Download Buttons */
-.theme-toggle-button,
-.side-download-btn {
-  width: 100%;
-  background: none;
-  border: 1px solid #0d6efd;
-  color: #0d6efd;
-  padding: 8px 12px;
-  border-radius: 4px;
-  cursor: pointer;
-  margin-top: 10px;
-  transition: background 0.2s, color 0.2s;
-}
-
-.theme-toggle-button:hover,
-.side-download-btn:hover {
-  background-color: #0d6efd;
-  color: #fff;
-}
-
-/* Agent Directory Centering */
-.agent-list-section {
+/* Main content */
+.app-content {
   padding: 20px;
+}
+
+.agent-list-section {
   max-width: 900px;
   margin: 0 auto;
 }
 
-/* Loading Overlay */
+.agent-list-section .search-box {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.refresh-button {
+  background-color: #0d6efd;
+  color: #fff;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.refresh-button:hover {
+  background-color: #0a58ca;
+}
+
+/* Tables */
+.agents-table, .assignments-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+.agents-table th, .agents-table td,
+.assignments-table th, .assignments-table td {
+  border: 1px solid #ddd;
+  padding: 8px;
+}
+
+.agents-table th, .assignments-table th {
+  background-color: #f9f9f9;
+}
+
+/* Download CSV buttons in main content */
+.download-completed-btn {
+  background-color: #e91e63; /* pinkish color for difference */
+  color: #fff;
+  border: none;
+  padding: 10px 16px;
+  font-weight: bold;
+  margin-bottom: 15px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.download-completed-btn:hover {
+  background-color: #d81b60;
+}
+
+/* Loading overlay */
 .loading-overlay {
   position: fixed;
   top: 0;
@@ -246,51 +277,8 @@ body, html, .app {
   background-color: #0d6efd;
 }
 
-/* Back Button */
-.back-button {
-  background: none;
-  border: 1px solid #0d6efd;
-  color: #0d6efd;
-  padding: 6px 12px;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background 0.2s, color 0.2s;
-}
-
-.back-button:hover {
-  background-color: #0d6efd;
-  color: #fff;
-}
-
-/* Minimalistic Table Styling */
-.assignments-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 16px;
-}
-
-.assignments-table th, .assignments-table td {
-  border: 1px solid #ddd;
-  padding: 10px;
-  font-size: 14px;
-  color: inherit;
-}
-
-.assignments-table th {
-  background-color: #f9f9f9;
-}
-
-.assigned-row {
-  background-color: #fefefe;
-}
-
-.previously-assigned-row {
-  background-color: #fafafa;
-}
-
-/* View Section (for Completed, Queue, etc.) */
+/* Additional styling for "view-section" */
 .view-section {
-  padding: 20px;
   max-width: 900px;
   margin: 0 auto;
 }
