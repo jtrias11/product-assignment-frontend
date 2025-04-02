@@ -18,8 +18,12 @@ body, html, .app {
 }
 
 /* Ensure text in dark mode is visible */
-.dark-mode h1, .dark-mode h2, .dark-mode h3, .dark-mode p,
-.dark-mode th, .dark-mode td {
+.dark-mode h1, 
+.dark-mode h2, 
+.dark-mode h3, 
+.dark-mode p, 
+.dark-mode th, 
+.dark-mode td {
   color: #fff;
 }
 
@@ -31,16 +35,20 @@ body, html, .app {
   padding: 12px 20px;
   border-bottom: 1px solid #ccc;
 }
+
 .light-mode .app-header {
   background-color: #fff;
 }
+
 .dark-mode .app-header {
   background-color: #111;
 }
+
 .header-left {
   display: flex;
   align-items: center;
 }
+
 .hamburger-btn {
   background: none;
   border: none;
@@ -48,27 +56,30 @@ body, html, .app {
   padding: 4px;
   margin-right: 12px;
 }
+
 .hamburger-btn svg {
   width: 24px;
   height: 24px;
   fill: currentColor;
 }
+
 .brand-title {
   margin: 0;
   font-size: 20px;
   font-weight: bold;
 }
+
 .header-right {
   flex: 1;
   display: flex;
   justify-content: flex-end;
 }
 
-/* Side Menu */
+/* Side Menu (slides from left, fully hidden by default) */
 .side-menu {
   position: fixed;
   top: 0;
-  left: -240px; /* Fully hidden when closed */
+  left: -240px;
   width: 240px;
   height: 100vh;
   background-color: #fff;
@@ -78,14 +89,17 @@ body, html, .app {
   transition: left 0.3s;
   z-index: 2000;
 }
+
 .dark-mode .side-menu {
   background-color: #111;
   color: #fff;
   border-right: 1px solid #333;
 }
+
 .side-menu.open {
   left: 0;
 }
+
 .close-menu-btn {
   background: none;
   border: none;
@@ -94,6 +108,8 @@ body, html, .app {
   color: inherit;
   margin-bottom: 10px;
 }
+
+/* Side Menu Navigation */
 .side-menu-nav button {
   display: block;
   width: 100%;
@@ -107,10 +123,12 @@ body, html, .app {
   cursor: pointer;
   transition: background 0.2s, color 0.2s;
 }
+
 .side-menu-nav button:hover {
   background-color: #0d6efd;
   color: #fff;
 }
+
 .theme-toggle-button {
   width: 100%;
   background: none;
@@ -122,30 +140,36 @@ body, html, .app {
   margin-top: 10px;
   transition: background 0.2s, color 0.2s;
 }
+
 .theme-toggle-button:hover {
   background-color: #0d6efd;
   color: #fff;
 }
+
 .menu-upload-section {
   margin-top: 20px;
   display: flex;
   flex-direction: column;
 }
+
 .menu-upload-section .upload-icon {
   display: flex;
   align-items: center;
   cursor: pointer;
   margin-bottom: 8px;
 }
+
 .menu-upload-section .upload-icon span {
   margin-left: 6px;
 }
+
 .menu-upload-section .upload-icon:hover {
   background-color: #0d6efd;
   color: #fff;
   border-radius: 4px;
   padding: 4px;
 }
+
 .file-input {
   display: none;
 }
@@ -154,20 +178,26 @@ body, html, .app {
 .app-content {
   padding: 20px;
 }
+
 .agent-list-section {
   max-width: 900px;
   margin: 0 auto;
 }
+
+/* Search Box */
 .search-box {
   display: flex;
   gap: 10px;
   margin-bottom: 10px;
 }
+
 .search-box input {
   padding: 8px;
   border: 1px solid #ccc;
   border-radius: 4px;
 }
+
+/* Refresh Button */
 .refresh-button {
   background-color: #0d6efd;
   color: #fff;
@@ -176,6 +206,7 @@ body, html, .app {
   border-radius: 4px;
   cursor: pointer;
 }
+
 .refresh-button:hover {
   background-color: #0a58ca;
 }
@@ -184,6 +215,7 @@ body, html, .app {
 .system-status-cards {
   margin-bottom: 20px;
 }
+
 .status-card {
   background-color: #f9f9f9;
   padding: 10px;
@@ -191,6 +223,7 @@ body, html, .app {
   border-radius: 4px;
   margin-bottom: 10px;
 }
+
 .dark-mode .status-card {
   background-color: #222;
   border: 1px solid #444;
@@ -203,14 +236,17 @@ body, html, .app {
   border-collapse: collapse;
   margin-top: 10px;
 }
+
 .agents-table th, .agents-table td,
 .assignments-table th, .assignments-table td {
   border: 1px solid #ddd;
   padding: 8px;
 }
+
 .agents-table th, .assignments-table th {
   background-color: #f9f9f9;
 }
+
 .dark-mode .agents-table th,
 .dark-mode .assignments-table th {
   background-color: #222;
@@ -225,20 +261,23 @@ body, html, .app {
   border-radius: 4px;
   cursor: pointer;
 }
+
 .view-dashboard-btn:hover {
   background-color: #1976d2;
 }
 
-/* Agent Dashboard */
+/* Agent Dashboard & Other Views */
 .view-section {
   max-width: 900px;
   margin: 0 auto;
 }
+
 .dashboard-actions, .action-buttons {
   display: flex;
   gap: 10px;
   margin-bottom: 10px;
 }
+
 .request-task-btn, .unassign-all-btn, .complete-all-btn,
 .complete-task-btn, .unassign-task-btn {
   background-color: #0d6efd;
@@ -248,12 +287,13 @@ body, html, .app {
   border-radius: 4px;
   cursor: pointer;
 }
+
 .request-task-btn:hover, .unassign-all-btn:hover, .complete-all-btn:hover,
 .complete-task-btn:hover, .unassign-task-btn:hover {
   background-color: #0a58ca;
 }
 
-/* Download CSV buttons */
+/* Download CSV Buttons */
 .download-completed-btn {
   background-color: #e91e63;
   color: #fff;
@@ -264,6 +304,7 @@ body, html, .app {
   border-radius: 4px;
   cursor: pointer;
 }
+
 .download-completed-btn:hover {
   background-color: #d81b60;
 }
@@ -279,6 +320,7 @@ body, html, .app {
   margin-top: 15px;
   transition: background 0.2s, color 0.2s;
 }
+
 .back-button:hover {
   background-color: #0d6efd;
   color: #fff;
@@ -297,6 +339,7 @@ body, html, .app {
   align-items: center;
   z-index: 1000;
 }
+
 .spinner-large {
   border: 8px solid #f3f3f3;
   border-top: 8px solid #000;
@@ -305,6 +348,7 @@ body, html, .app {
   height: 60px;
   animation: spin 1s linear infinite;
 }
+
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
@@ -322,6 +366,7 @@ body, html, .app {
   align-items: center;
   z-index: 2000;
 }
+
 .confirm-dialog {
   background: #fff;
   padding: 20px;
@@ -330,11 +375,13 @@ body, html, .app {
   text-align: center;
   color: #000;
 }
+
 .confirm-buttons {
   display: flex;
   justify-content: space-around;
   margin-top: 15px;
 }
+
 .cancel-button, .confirm-button {
   padding: 8px 12px;
   border: none;
@@ -343,9 +390,11 @@ body, html, .app {
   cursor: pointer;
   color: #fff;
 }
+
 .cancel-button {
   background-color: #000;
 }
+
 .confirm-button {
   background-color: #0d6efd;
 }
