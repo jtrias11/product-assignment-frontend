@@ -15,6 +15,17 @@ body, html, .app {
   color: #fff;
 }
 
+/* Additional color fixes for dark mode text */
+.dark-mode h1,
+.dark-mode h2,
+.dark-mode h3,
+.dark-mode h4,
+.dark-mode p,
+.dark-mode th,
+.dark-mode td {
+  color: #fff;
+}
+
 /* Header */
 .app-header {
   display: flex;
@@ -66,7 +77,7 @@ body, html, .app {
 .side-menu {
   position: fixed;
   top: 0;
-  left: -240px; /* fully hidden offscreen */
+  left: -240px; /* hidden */
   width: 240px;
   height: 100vh;
   background-color: #fff;
@@ -195,7 +206,7 @@ body, html, .app {
   background-color: #0a58ca;
 }
 
-/* System status card on Agent Directory */
+/* System Status Card */
 .system-status-cards {
   margin-bottom: 20px;
 }
@@ -206,6 +217,12 @@ body, html, .app {
   border: 1px solid #ddd;
   border-radius: 4px;
   margin-bottom: 10px;
+}
+
+.dark-mode .status-card {
+  background-color: #222; /* darker background in dark mode */
+  border: 1px solid #444;
+  color: #fff;
 }
 
 /* Tables */
@@ -225,6 +242,12 @@ body, html, .app {
   background-color: #f9f9f9;
 }
 
+.dark-mode .agents-table th,
+.dark-mode .assignments-table th {
+  background-color: #222;
+  color: #fff;
+}
+
 /* View Dashboard button in agent table */
 .view-dashboard-btn {
   background-color: #2196f3;
@@ -239,13 +262,13 @@ body, html, .app {
   background-color: #1976d2;
 }
 
-/* Agent Dashboard styling */
+/* Agent Dashboard */
 .view-section {
   max-width: 900px;
   margin: 0 auto;
 }
 
-.dashboard-actions, .action-buttons {
+.dashboard-actions {
   display: flex;
   gap: 10px;
   margin-bottom: 10px;
@@ -266,7 +289,7 @@ body, html, .app {
   background-color: #0a58ca;
 }
 
-/* Download CSV buttons */
+/* Download CSV buttons (Completed, Available, etc.) */
 .download-completed-btn {
   background-color: #e91e63;
   color: #fff;

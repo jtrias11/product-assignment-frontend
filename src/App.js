@@ -8,7 +8,7 @@ const getApiBaseUrl = () => {
 const API_BASE_URL = getApiBaseUrl();
 
 function App() {
-  // Theme & Side Menu
+  // Theme & Menu
   const [darkMode, setDarkMode] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const toggleTheme = () => setDarkMode(!darkMode);
@@ -18,27 +18,22 @@ function App() {
   const [agents, setAgents] = useState([]);
   const [products, setProducts] = useState([]);
   const [assignments, setAssignments] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [loadingMessage, setLoadingMessage] = useState('Loading data...');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [previouslyAssigned, setPreviouslyAssigned] = useState([]); // For "Unassigned Tasks" data
 
-  // "System Status" counters
+  // System Status
   const [totalAgents, setTotalAgents] = useState(0);
   const [totalProducts, setTotalProducts] = useState(0);
   const [totalAssignments, setTotalAssignments] = useState(0);
 
-  // View states
-  // "agents" (default), "completed", "available", "queue", or "agent-dashboard"
+  // UI states
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadingMessage, setLoadingMessage] = useState('Loading data...');
+  const [searchTerm, setSearchTerm] = useState('');
+
+  // Agent selection & view
+  // Possible views: "agents", "completed", "available", "queue", "unassigned", "agent-dashboard"
   const [view, setView] = useState('agents');
   const [selectedAgent, setSelectedAgent] = useState(null);
-
-  // Confirmation dialog
-  const [confirmDialog, setConfirmDialog] = useState({
-    show: false,
-    title: '',
-    message: '',
-    onConfirm: null,
-  });
 
   // Load data from server
   const loadDataFromServer = useCallback(async () => {
@@ -61,7 +56,7 @@ function App() {
       setAgents(agentsData);
       setAssignments(assignmentsData);
 
-      // Update system status counters
+      // System status
       setTotalAgents(agentsData.length);
       setTotalProducts(productsData.length);
       setTotalAssignments(assignmentsData.length);
@@ -72,11 +67,29 @@ function App() {
     }
   }, []);
 
+  // Load previously assigned (unassigned) tasks
+  const loadPreviouslyAssigned = async () => {
+    setIsLoading(true);
+    setLoadingMessage('Loading unassigned tasks...');
+    try {
+      const res = await fetch(`${API_BASE_URL}/previously-assigned`);
+      if (!res.ok) {
+        throw new Error('Failed to load unassigned tasks');
+      }
+      const data = await res.json();
+      setPreviouslyAssigned(data);
+    } catch (error) {
+      console.error('Error loading previously assigned tasks:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
     loadDataFromServer();
   }, [loadDataFromServer]);
 
-  // CSV Upload
+  // CSV upload
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -105,7 +118,7 @@ function App() {
   // Refresh data
   const handleRefreshData = async () => {
     setIsLoading(true);
-    setLoadingMessage('Refreshing data from server...');
+    setLoadingMessage('Refreshing data...');
     try {
       const refreshRes = await fetch(`${API_BASE_URL}/refresh`, { method: 'POST' });
       if (!refreshRes.ok) {
@@ -120,8 +133,29 @@ function App() {
     }
   };
 
-  // Action functions
+  // Summation of "count" for an agent's assigned tasks
+  const getAgentWorkloadCount = (agentId) => {
+    // Find all active assignments for that agent
+    const agentAssignments = assignments.filter(a =>
+      a.agentId === agentId && !a.completed && !a.unassignedTime
+    );
+    let sum = 0;
+    agentAssignments.forEach(assign => {
+      const product = products.find(p => p.id === assign.productId);
+      const c = product?.count ? parseInt(product.count, 10) : 1;
+      sum += c;
+    });
+    return sum;
+  };
+
+  // Action Functions
   const requestTask = async (agentId) => {
+    // Check if sum of assigned "count" >= 30
+    const workloadCount = getAgentWorkloadCount(agentId);
+    if (workloadCount >= 30) {
+      alert("You must complete or unassign some tasks before requesting new ones. (Max capacity = 30)");
+      return;
+    }
     setIsLoading(true);
     try {
       await fetch(`${API_BASE_URL}/assign`, {
@@ -163,7 +197,7 @@ function App() {
       });
       await loadDataFromServer();
     } catch (error) {
-      console.error('Error completing all tasks for agent:', error);
+      console.error('Error completing all tasks:', error);
     } finally {
       setIsLoading(false);
     }
@@ -201,22 +235,7 @@ function App() {
     }
   };
 
-  const unassignAllTasks = async () => {
-    setIsLoading(true);
-    try {
-      await fetch(`${API_BASE_URL}/unassign-all`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      });
-      await loadDataFromServer();
-    } catch (error) {
-      console.error('Error unassigning all tasks:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // CSV downloads
+  // CSV Download
   const downloadCompletedCSV = () => {
     window.open(`${API_BASE_URL}/download/completed-assignments`, '_blank');
   };
@@ -224,45 +243,29 @@ function App() {
     window.open(`${API_BASE_URL}/download/unassigned-products`, '_blank');
   };
 
-  // View switching
-  const handleViewChange = (newView) => {
-    setView(newView);
+  // Load "Unassigned Tasks" (previously assigned)
+  const handleLoadUnassignedView = async () => {
+    await loadPreviouslyAssigned();
+    setView('unassigned');
+    setSelectedAgent(null);
     setMenuOpen(false);
-    setSelectedAgent(null); // reset selected agent if user navigates away
   };
 
-  // Confirmation dialog
-  const showConfirmDialog = (title, text, onConfirm) => {
-    setConfirmDialog({ show: true, title, message: text, onConfirm });
+  // Side menu navigation
+  const handleViewChange = (newView) => {
+    setSelectedAgent(null);
+    setMenuOpen(false);
+    if (newView === 'unassigned') {
+      handleLoadUnassignedView();
+    } else {
+      setView(newView);
+    }
   };
 
-  const renderConfirmDialog = () => {
-    if (!confirmDialog.show) return null;
-    return (
-      <div className="confirm-overlay">
-        <div className="confirm-dialog">
-          <h3>{confirmDialog.title}</h3>
-          <p>{confirmDialog.message}</p>
-          <div className="confirm-buttons">
-            <button
-              onClick={() => setConfirmDialog({ show: false, title: '', message: '', onConfirm: null })}
-              className="cancel-button"
-            >
-              Cancel
-            </button>
-            <button onClick={confirmDialog.onConfirm} className="confirm-button">
-              Confirm
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  // Side menu (slides from left, fully hidden if not open)
+  // Rendering the side menu
   const renderSideMenu = () => (
     <div className={`side-menu ${menuOpen ? 'open' : ''} ${darkMode ? 'dark-mode' : 'light-mode'}`}>
-      <button className="close-menu-btn" onClick={toggleMenu}>✕</button>
+      <button className="close-menu-btn" onClick={() => setMenuOpen(false)}>✕</button>
       <nav className="side-menu-nav">
         <button onClick={() => handleViewChange('agents')} disabled={isLoading}>
           Agent Directory
@@ -275,6 +278,9 @@ function App() {
         </button>
         <button onClick={() => handleViewChange('queue')} disabled={isLoading}>
           Queue
+        </button>
+        <button onClick={() => handleViewChange('unassigned')} disabled={isLoading}>
+          Unassigned Tasks
         </button>
         <hr />
         <button onClick={toggleTheme} className="theme-toggle-button">
@@ -303,7 +309,7 @@ function App() {
   const renderHeader = () => (
     <header className={`app-header ${darkMode ? 'dark-mode' : ''}`}>
       <div className="header-left">
-        <button className="hamburger-btn" onClick={toggleMenu}>
+        <button className="hamburger-btn" onClick={() => setMenuOpen(true)}>
           <svg width="24" height="24"
                viewBox="0 0 24 24"
                fill={darkMode ? '#fff' : '#000'}>
@@ -312,11 +318,11 @@ function App() {
         </button>
         <h1 className="brand-title">Product Assignment</h1>
       </div>
-      <div className="header-right" />
+      <div className="header-right"></div>
     </header>
   );
 
-  // Agent Directory with system status
+  // Agent Directory
   const renderAgentDirectory = () => (
     <div className="agent-list-section">
       <h2>Agent Directory</h2>
@@ -351,27 +357,30 @@ function App() {
           </thead>
           <tbody>
             {agents
-              .filter((agent) =>
+              .filter(agent =>
                 agent.name.toLowerCase().includes(searchTerm.toLowerCase())
               )
-              .map((agent) => (
-                <tr key={agent.id}>
-                  <td>{agent.name}</td>
-                  <td>{agent.role}</td>
-                  <td>{agent.currentAssignments.length} / {agent.capacity}</td>
-                  <td>
-                    <button
-                      className="view-dashboard-btn"
-                      onClick={() => {
-                        setSelectedAgent(agent.id);
-                        setView('agent-dashboard');
-                      }}
-                    >
-                      View Dashboard
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              .map(agent => {
+                const workloadCount = getAgentWorkloadCount(agent.id);
+                return (
+                  <tr key={agent.id}>
+                    <td>{agent.name}</td>
+                    <td>{agent.role}</td>
+                    <td>{workloadCount}/30</td>
+                    <td>
+                      <button
+                        className="view-dashboard-btn"
+                        onClick={() => {
+                          setSelectedAgent(agent.id);
+                          setView('agent-dashboard');
+                        }}
+                      >
+                        View Dashboard
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
           </tbody>
         </table>
       )}
@@ -380,18 +389,18 @@ function App() {
 
   // Agent Dashboard
   const renderAgentDashboard = () => {
-    const agent = agents.find((a) => a.id === selectedAgent);
+    const agent = agents.find(a => a.id === selectedAgent);
     if (!agent) return <p>Agent not found.</p>;
 
-    // Find the tasks from assignments (not completed, not unassigned)
-    const agentAssignments = assignments.filter((a) =>
+    // Get active assignments
+    const agentAssignments = assignments.filter(a =>
       a.agentId === agent.id && !a.completed && !a.unassignedTime
     );
 
     return (
       <div className="view-section">
         <h2>{agent.name} - Dashboard</h2>
-        <p>{agent.role} • {agentAssignments.length} / {agent.capacity} tasks</p>
+        <p>{agent.role} • {getAgentWorkloadCount(agent.id)}/30 tasks</p>
         <div className="dashboard-actions">
           <button
             className="request-task-btn"
@@ -415,7 +424,6 @@ function App() {
             Complete All
           </button>
         </div>
-
         {agentAssignments.length === 0 ? (
           <p>No tasks assigned.</p>
         ) : (
@@ -424,16 +432,23 @@ function App() {
               <tr>
                 <th>Product ID</th>
                 <th>Count</th>
+                <th>Tenant ID</th>
+                <th>Priority</th>
+                <th>Created On</th>
                 <th>Assigned On</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {agentAssignments.map((assign) => {
+              {agentAssignments.map(assign => {
+                const product = products.find(p => p.id === assign.productId);
                 return (
                   <tr key={assign.id}>
                     <td>{assign.productId}</td>
-                    <td>{(products.find(p => p.id === assign.productId)?.count) || 1}</td>
+                    <td>{product?.count || 1}</td>
+                    <td>{product?.tenantId || 'N/A'}</td>
+                    <td>{product?.priority || 'N/A'}</td>
+                    <td>{product?.createdOn || 'N/A'}</td>
                     <td>{assign.assignedOn || 'N/A'}</td>
                     <td>
                       <button
@@ -457,7 +472,6 @@ function App() {
             </tbody>
           </table>
         )}
-
         <button
           className="back-button"
           onClick={() => {
@@ -473,7 +487,7 @@ function App() {
 
   // Completed Tasks
   const renderCompletedTasks = () => {
-    const completed = assignments.filter((a) => a.completed);
+    const completed = assignments.filter(a => a.completed);
     return (
       <div className="view-section">
         <h2>Completed Tasks</h2>
@@ -494,7 +508,7 @@ function App() {
               </tr>
             </thead>
             <tbody>
-              {completed.map((c) => (
+              {completed.map(c => (
                 <tr key={c.id}>
                   <td>{c.id}</td>
                   <td>{c.agentId}</td>
@@ -515,7 +529,7 @@ function App() {
 
   // Available Products (Unassigned)
   const renderAvailableProducts = () => {
-    const unassigned = products.filter((p) => !p.assigned);
+    const unassigned = products.filter(p => !p.assigned);
     return (
       <div className="view-section">
         <h2>Available Products</h2>
@@ -536,7 +550,7 @@ function App() {
               </tr>
             </thead>
             <tbody>
-              {unassigned.map((p) => (
+              {unassigned.map(p => (
                 <tr key={p.id}>
                   <td>{p.id}</td>
                   <td>{p.count || 1}</td>
@@ -555,41 +569,48 @@ function App() {
     );
   };
 
-  // Queue
-  const renderQueue = () => {
+  // Unassigned Tasks (Previously Assigned)
+  const renderUnassignedTasks = () => {
+    if (previouslyAssigned.length === 0) {
+      return (
+        <div className="view-section">
+          <h2>Unassigned Tasks</h2>
+          <p>No unassigned tasks found.</p>
+          <button className="back-button" onClick={() => setView('agents')}>
+            Back to Directory
+          </button>
+        </div>
+      );
+    }
     return (
       <div className="view-section">
-        <h2>Queue</h2>
-        {products.length === 0 ? (
-          <p>No products found.</p>
-        ) : (
-          <table className="assignments-table">
-            <thead>
-              <tr>
-                <th>Abstract ID</th>
-                <th>Name</th>
-                <th>Count</th>
-                <th>Tenant ID</th>
-                <th>Priority</th>
-                <th>Created On</th>
-                <th>Assigned</th>
+        <h2>Unassigned Tasks</h2>
+        <table className="assignments-table">
+          <thead>
+            <tr>
+              <th>Abstract ID</th>
+              <th>Count</th>
+              <th>Tenant ID</th>
+              <th>Priority</th>
+              <th>Created On</th>
+              <th>Unassigned Time</th>
+              <th>Unassigned By</th>
+            </tr>
+          </thead>
+          <tbody>
+            {previouslyAssigned.map(p => (
+              <tr key={p.id}>
+                <td>{p.id}</td>
+                <td>{p.count || 1}</td>
+                <td>{p.tenantId || 'N/A'}</td>
+                <td>{p.priority || 'N/A'}</td>
+                <td>{p.createdOn || 'N/A'}</td>
+                <td>{p.unassignedTime || 'N/A'}</td>
+                <td>{p.unassignedBy || 'N/A'}</td>
               </tr>
-            </thead>
-            <tbody>
-              {products.map((p) => (
-                <tr key={p.id}>
-                  <td>{p.id}</td>
-                  <td>{p.name || 'N/A'}</td>
-                  <td>{p.count || 1}</td>
-                  <td>{p.tenantId || 'N/A'}</td>
-                  <td>{p.priority || 'N/A'}</td>
-                  <td>{p.createdOn || 'N/A'}</td>
-                  <td>{p.assigned ? 'Yes' : 'No'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+            ))}
+          </tbody>
+        </table>
         <button className="back-button" onClick={() => setView('agents')}>
           Back to Directory
         </button>
@@ -602,6 +623,7 @@ function App() {
     if (view === 'completed') return renderCompletedTasks();
     if (view === 'available') return renderAvailableProducts();
     if (view === 'queue') return renderQueue();
+    if (view === 'unassigned') return renderUnassignedTasks();
     if (view === 'agent-dashboard' && selectedAgent) return renderAgentDashboard();
     return renderAgentDirectory(); // default
   };
@@ -611,7 +633,7 @@ function App() {
       {/* Header */}
       <header className={`app-header ${darkMode ? 'dark-mode' : ''}`}>
         <div className="header-left">
-          <button className="hamburger-btn" onClick={toggleMenu}>
+          <button className="hamburger-btn" onClick={() => setMenuOpen(true)}>
             <svg width="24" height="24"
                  viewBox="0 0 24 24"
                  fill={darkMode ? '#fff' : '#000'}>
@@ -625,7 +647,7 @@ function App() {
 
       {/* Side Menu */}
       <div className={`side-menu ${menuOpen ? 'open' : ''} ${darkMode ? 'dark-mode' : 'light-mode'}`}>
-        <button className="close-menu-btn" onClick={toggleMenu}>✕</button>
+        <button className="close-menu-btn" onClick={() => setMenuOpen(false)}>✕</button>
         <nav className="side-menu-nav">
           <button onClick={() => handleViewChange('agents')} disabled={isLoading}>
             Agent Directory
@@ -638,6 +660,9 @@ function App() {
           </button>
           <button onClick={() => handleViewChange('queue')} disabled={isLoading}>
             Queue
+          </button>
+          <button onClick={() => handleViewChange('unassigned')} disabled={isLoading}>
+            Unassigned Tasks
           </button>
           <hr />
           <button onClick={toggleTheme} className="theme-toggle-button">
@@ -672,7 +697,25 @@ function App() {
           </div>
         )}
         {renderDashboard()}
-        {renderConfirmDialog()}
+        {confirmDialog.show && (
+          <div className="confirm-overlay">
+            <div className="confirm-dialog">
+              <h3>{confirmDialog.title}</h3>
+              <p>{confirmDialog.message}</p>
+              <div className="confirm-buttons">
+                <button
+                  onClick={() => setConfirmDialog({ show: false, title: '', message: '', onConfirm: null })}
+                  className="cancel-button"
+                >
+                  Cancel
+                </button>
+                <button onClick={confirmDialog.onConfirm} className="confirm-button">
+                  Confirm
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );
