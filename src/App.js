@@ -8,7 +8,7 @@ const getApiBaseUrl = () => {
 const API_BASE_URL = getApiBaseUrl();
 
 function App() {
-  // Theme & Menu
+  // Theme & Side Menu state
   const [darkMode, setDarkMode] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const toggleTheme = () => setDarkMode(!darkMode);
@@ -18,23 +18,24 @@ function App() {
   const [agents, setAgents] = useState([]);
   const [products, setProducts] = useState([]);
   const [assignments, setAssignments] = useState([]);
+  const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [loadingMessage, setLoadingMessage] = useState('Loading data from server...');
   const [searchTerm, setSearchTerm] = useState('');
+  // When an agent is selected, show its dashboard view
   const [selectedAgent, setSelectedAgent] = useState(null);
-
-  // Current view: "agents", "completed", "available", "queue"
+  // Views: "agents", "completed", "available", "queue"
   const [view, setView] = useState('agents');
 
-  // Confirmation dialog
+  // Confirmation dialog state
   const [confirmDialog, setConfirmDialog] = useState({
     show: false,
     title: '',
     message: '',
-    onConfirm: null
+    onConfirm: null,
   });
 
-  // Load data from server
+  // --- Data Loading ---
   const loadDataFromServer = useCallback(async () => {
     setIsLoading(true);
     setLoadingMessage('Loading data from server...');
@@ -42,7 +43,7 @@ function App() {
       const [prodRes, agentsRes, assignRes] = await Promise.all([
         fetch(`${API_BASE_URL}/products`),
         fetch(`${API_BASE_URL}/agents`),
-        fetch(`${API_BASE_URL}/assignments`)
+        fetch(`${API_BASE_URL}/assignments`),
       ]);
       if (!prodRes.ok || !agentsRes.ok || !assignRes.ok) {
         throw new Error('One or more fetch requests failed');
@@ -53,8 +54,9 @@ function App() {
       setProducts(productsData);
       setAgents(agentsData);
       setAssignments(assignmentsData);
+      setMessage('Data loaded successfully');
     } catch (error) {
-      console.error('Error loading data:', error);
+      setMessage(`Error loading data: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
@@ -64,7 +66,7 @@ function App() {
     loadDataFromServer();
   }, [loadDataFromServer]);
 
-  // CSV Upload
+  // --- File Upload ---
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -82,15 +84,17 @@ function App() {
         const errorText = await response.text();
         throw new Error(`Upload failed: ${errorText}`);
       }
+      const result = await response.json();
+      setMessage(result.message);
       await loadDataFromServer();
     } catch (error) {
-      console.error('Error uploading file:', error);
+      setMessage(`Error uploading file: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Refresh data
+  // --- Refresh Data ---
   const handleRefreshData = async () => {
     setIsLoading(true);
     setLoadingMessage('Refreshing data from server...');
@@ -102,20 +106,21 @@ function App() {
       }
       await loadDataFromServer();
     } catch (error) {
-      console.error('Error refreshing data:', error);
+      setMessage(`Error refreshing data: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Action functions (called in UI to avoid ESLint warnings)
+  // --- Action Functions ---
+  // These functions are called by buttons in the UI so they are used.
   const requestTask = async (agentId) => {
     setIsLoading(true);
     try {
       const res = await fetch(`${API_BASE_URL}/assign`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agentId })
+        body: JSON.stringify({ agentId }),
       });
       await res.json();
       await loadDataFromServer();
@@ -132,7 +137,7 @@ function App() {
       const res = await fetch(`${API_BASE_URL}/complete`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agentId, productId })
+        body: JSON.stringify({ agentId, productId }),
       });
       await res.json();
       await loadDataFromServer();
@@ -149,12 +154,12 @@ function App() {
       const res = await fetch(`${API_BASE_URL}/complete-all-agent`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agentId })
+        body: JSON.stringify({ agentId }),
       });
       await res.json();
       await loadDataFromServer();
     } catch (error) {
-      console.error('Error completing all tasks for agent:', error);
+      console.error('Error completing all tasks:', error);
     } finally {
       setIsLoading(false);
     }
@@ -166,7 +171,7 @@ function App() {
       const res = await fetch(`${API_BASE_URL}/unassign-product`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productId, agentId })
+        body: JSON.stringify({ productId, agentId }),
       });
       await res.json();
       await loadDataFromServer();
@@ -183,7 +188,7 @@ function App() {
       const res = await fetch(`${API_BASE_URL}/unassign-agent`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agentId })
+        body: JSON.stringify({ agentId }),
       });
       await res.json();
       await loadDataFromServer();
@@ -199,7 +204,7 @@ function App() {
     try {
       const res = await fetch(`${API_BASE_URL}/unassign-all`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
       });
       await res.json();
       await loadDataFromServer();
@@ -210,7 +215,7 @@ function App() {
     }
   };
 
-  // CSV Download
+  // --- CSV Download Functions ---
   const downloadCompletedCSV = () => {
     window.open(`${API_BASE_URL}/download/completed-assignments`, '_blank');
   };
@@ -218,13 +223,13 @@ function App() {
     window.open(`${API_BASE_URL}/download/unassigned-products`, '_blank');
   };
 
-  // Switch views
+  // --- View Switching ---
   const handleViewChange = (newView) => {
     setView(newView);
     setMenuOpen(false);
   };
 
-  // Confirmation dialog
+  // --- Confirmation Dialog ---
   const showConfirmDialog = (title, text, onConfirm) => {
     setConfirmDialog({ show: true, title, message: text, onConfirm });
   };
@@ -252,7 +257,7 @@ function App() {
     );
   };
 
-  // Side menu (slides from left)
+  // --- Side Menu (slides from left) ---
   const renderSideMenu = () => (
     <div className={`side-menu ${menuOpen ? 'open' : ''} ${darkMode ? 'dark-mode' : 'light-mode'}`}>
       <button className="close-menu-btn" onClick={toggleMenu}>✕</button>
@@ -279,8 +284,7 @@ function App() {
         <label htmlFor="output-csv" className="upload-icon">
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"
                viewBox="0 0 24 24"
-               fill={darkMode ? '#fff' : '#0d6efd'}
-          >
+               fill={darkMode ? '#fff' : '#0d6efd'}>
             <path d="M5 20h14v-2H5v2zm7-18L5.33 9h3.84v4h6.66v-4h3.84L12 2z"/>
           </svg>
           <span>Upload CSV</span>
@@ -293,7 +297,7 @@ function App() {
     </div>
   );
 
-  // Header (hamburger on the left)
+  // --- Header (hamburger menu on left, brand on left) ---
   const renderHeader = () => (
     <header className={`app-header ${darkMode ? 'dark-mode' : ''}`}>
       <div className="header-left">
@@ -310,7 +314,7 @@ function App() {
     </header>
   );
 
-  // Agent Directory
+  // --- Agent Directory View ---
   const renderAgentDirectory = () => (
     <div className="agent-list-section">
       <h2>Agent Directory</h2>
@@ -343,7 +347,7 @@ function App() {
                 <tr key={agent.id} onClick={() => setSelectedAgent(agent.id)}>
                   <td>{agent.name}</td>
                   <td>{agent.role}</td>
-                  <td>{agent.currentAssignments.length}/{agent.capacity}</td>
+                  <td>{agent.currentAssignments.length} / {agent.capacity}</td>
                 </tr>
               ))}
           </tbody>
@@ -352,11 +356,41 @@ function App() {
     </div>
   );
 
-  // Completed Tasks View
+  // --- Agent Dashboard View ---
+  const renderAgentDashboard = () => {
+    const agent = agents.find((a) => a.id === selectedAgent);
+    if (!agent) return null;
+    return (
+      <div className="view-section">
+        <button className="back-button" onClick={() => setSelectedAgent(null)}>
+          Back to Agent Directory
+        </button>
+        <h2>{agent.name} - Dashboard</h2>
+        <p>{agent.role} • {agent.currentAssignments.length} / {agent.capacity} tasks</p>
+        <div className="action-buttons">
+          <button className="action-btn" onClick={() => requestTask(agent.id)} disabled={isLoading}>
+            Request Task
+          </button>
+          <button className="action-btn" onClick={() => completeAllTasksForAgent(agent.id)} disabled={isLoading || agent.currentAssignments.length === 0}>
+            Complete All Tasks
+          </button>
+        </div>
+        <div>
+          {/* Additional agent dashboard details and per-task actions can go here */}
+          <p>[Agent tasks table here]</p>
+        </div>
+      </div>
+    );
+  };
+
+  // --- Completed Tasks View ---
   const renderCompletedTasks = () => {
     const completed = assignments.filter((a) => a.completed);
     return (
       <div className="view-section">
+        <button className="back-button" onClick={() => setView('agents')}>
+          Back to Agent Directory
+        </button>
         <h2>Completed Tasks</h2>
         <button className="download-completed-btn" onClick={downloadCompletedCSV}>
           Download Completed CSV
@@ -396,11 +430,14 @@ function App() {
     );
   };
 
-  // Available Products (Unassigned)
+  // --- Available Products (Unassigned) View ---
   const renderAvailableProducts = () => {
     const unassigned = products.filter((p) => !p.assigned);
     return (
       <div className="view-section">
+        <button className="back-button" onClick={() => setView('agents')}>
+          Back to Agent Directory
+        </button>
         <h2>Available Products</h2>
         <button className="download-completed-btn" onClick={downloadUnassignedCSV}>
           Download Unassigned CSV
@@ -435,48 +472,55 @@ function App() {
     );
   };
 
-  // Queue View
-  const renderQueue = () => (
-    <div className="view-section">
-      <h2>Queue</h2>
-      {products.length === 0 ? (
-        <p>No products found.</p>
-      ) : (
-        <table className="assignments-table">
-          <thead>
-            <tr>
-              <th>Abstract ID</th>
-              <th>Name</th>
-              <th>Count</th>
-              <th>Tenant ID</th>
-              <th>Priority</th>
-              <th>Created On</th>
-              <th>Assigned</th>
-            </tr>
-          </thead>
-          <tbody>
-            {products.map((p) => (
-              <tr key={p.id}>
-                <td>{p.id}</td>
-                <td>{p.name || 'N/A'}</td>
-                <td>{p.count}</td>
-                <td>{p.tenantId || 'N/A'}</td>
-                <td>{p.priority || 'N/A'}</td>
-                <td>{p.createdOn || 'N/A'}</td>
-                <td>{p.assigned ? 'Yes' : 'No'}</td>
+  // --- Queue View ---
+  const renderQueue = () => {
+    return (
+      <div className="view-section">
+        <button className="back-button" onClick={() => setView('agents')}>
+          Back to Agent Directory
+        </button>
+        <h2>Queue</h2>
+        {products.length === 0 ? (
+          <p>No products found.</p>
+        ) : (
+          <table className="assignments-table">
+            <thead>
+              <tr>
+                <th>Abstract ID</th>
+                <th>Name</th>
+                <th>Count</th>
+                <th>Tenant ID</th>
+                <th>Priority</th>
+                <th>Created On</th>
+                <th>Assigned</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </div>
-  );
+            </thead>
+            <tbody>
+              {products.map((p) => (
+                <tr key={p.id}>
+                  <td>{p.id}</td>
+                  <td>{p.name || 'N/A'}</td>
+                  <td>{p.count}</td>
+                  <td>{p.tenantId || 'N/A'}</td>
+                  <td>{p.priority || 'N/A'}</td>
+                  <td>{p.createdOn || 'N/A'}</td>
+                  <td>{p.assigned ? 'Yes' : 'No'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    );
+  };
 
-  // Main content switch
+  // --- Main Dashboard Switch ---
   const renderDashboard = () => {
     if (view === 'completed') return renderCompletedTasks();
     if (view === 'available') return renderAvailableProducts();
     if (view === 'queue') return renderQueue();
+    // If an agent is selected, show its dashboard
+    if (selectedAgent) return renderAgentDashboard();
     return renderAgentDirectory();
   };
 
@@ -484,7 +528,6 @@ function App() {
     <div className={`app ${darkMode ? 'dark-mode' : 'light-mode'}`}>
       {renderHeader()}
       {renderSideMenu()}
-
       <main className="app-content">
         {isLoading && (
           <div className="loading-overlay">
