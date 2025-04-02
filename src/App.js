@@ -8,7 +8,7 @@ const getApiBaseUrl = () => {
 const API_BASE_URL = getApiBaseUrl();
 
 function App() {
-  // Theme & Side Menu state
+  // Theme & Side Menu
   const [darkMode, setDarkMode] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const toggleTheme = () => setDarkMode(!darkMode);
@@ -18,16 +18,21 @@ function App() {
   const [agents, setAgents] = useState([]);
   const [products, setProducts] = useState([]);
   const [assignments, setAssignments] = useState([]);
-  const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(true);
-  const [loadingMessage, setLoadingMessage] = useState('Loading data from server...');
+  const [loadingMessage, setLoadingMessage] = useState('Loading data...');
   const [searchTerm, setSearchTerm] = useState('');
-  // When an agent is selected, show its dashboard view
-  const [selectedAgent, setSelectedAgent] = useState(null);
-  // Views: "agents", "completed", "available", "queue"
-  const [view, setView] = useState('agents');
 
-  // Confirmation dialog state
+  // "System Status" counters
+  const [totalAgents, setTotalAgents] = useState(0);
+  const [totalProducts, setTotalProducts] = useState(0);
+  const [totalAssignments, setTotalAssignments] = useState(0);
+
+  // View states
+  // "agents" (default), "completed", "available", "queue", or "agent-dashboard"
+  const [view, setView] = useState('agents');
+  const [selectedAgent, setSelectedAgent] = useState(null);
+
+  // Confirmation dialog
   const [confirmDialog, setConfirmDialog] = useState({
     show: false,
     title: '',
@@ -35,7 +40,7 @@ function App() {
     onConfirm: null,
   });
 
-  // --- Data Loading ---
+  // Load data from server
   const loadDataFromServer = useCallback(async () => {
     setIsLoading(true);
     setLoadingMessage('Loading data from server...');
@@ -51,12 +56,17 @@ function App() {
       const productsData = await prodRes.json();
       const agentsData = await agentsRes.json();
       const assignmentsData = await assignRes.json();
+
       setProducts(productsData);
       setAgents(agentsData);
       setAssignments(assignmentsData);
-      setMessage('Data loaded successfully');
+
+      // Update system status counters
+      setTotalAgents(agentsData.length);
+      setTotalProducts(productsData.length);
+      setTotalAssignments(assignmentsData.length);
     } catch (error) {
-      setMessage(`Error loading data: ${error.message}`);
+      console.error('Error loading data:', error);
     } finally {
       setIsLoading(false);
     }
@@ -66,7 +76,7 @@ function App() {
     loadDataFromServer();
   }, [loadDataFromServer]);
 
-  // --- File Upload ---
+  // CSV Upload
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -84,17 +94,15 @@ function App() {
         const errorText = await response.text();
         throw new Error(`Upload failed: ${errorText}`);
       }
-      const result = await response.json();
-      setMessage(result.message);
       await loadDataFromServer();
     } catch (error) {
-      setMessage(`Error uploading file: ${error.message}`);
+      console.error('Error uploading file:', error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // --- Refresh Data ---
+  // Refresh data
   const handleRefreshData = async () => {
     setIsLoading(true);
     setLoadingMessage('Refreshing data from server...');
@@ -106,23 +114,21 @@ function App() {
       }
       await loadDataFromServer();
     } catch (error) {
-      setMessage(`Error refreshing data: ${error.message}`);
+      console.error('Error refreshing data:', error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // --- Action Functions ---
-  // These functions are called by buttons in the UI so they are used.
+  // Action functions
   const requestTask = async (agentId) => {
     setIsLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/assign`, {
+      await fetch(`${API_BASE_URL}/assign`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ agentId }),
       });
-      await res.json();
       await loadDataFromServer();
     } catch (error) {
       console.error('Error requesting task:', error);
@@ -134,12 +140,11 @@ function App() {
   const completeTask = async (agentId, productId) => {
     setIsLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/complete`, {
+      await fetch(`${API_BASE_URL}/complete`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ agentId, productId }),
       });
-      await res.json();
       await loadDataFromServer();
     } catch (error) {
       console.error('Error completing task:', error);
@@ -151,15 +156,14 @@ function App() {
   const completeAllTasksForAgent = async (agentId) => {
     setIsLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/complete-all-agent`, {
+      await fetch(`${API_BASE_URL}/complete-all-agent`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ agentId }),
       });
-      await res.json();
       await loadDataFromServer();
     } catch (error) {
-      console.error('Error completing all tasks:', error);
+      console.error('Error completing all tasks for agent:', error);
     } finally {
       setIsLoading(false);
     }
@@ -168,12 +172,11 @@ function App() {
   const unassignProduct = async (productId, agentId) => {
     setIsLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/unassign-product`, {
+      await fetch(`${API_BASE_URL}/unassign-product`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ productId, agentId }),
       });
-      await res.json();
       await loadDataFromServer();
     } catch (error) {
       console.error('Error unassigning product:', error);
@@ -185,12 +188,11 @@ function App() {
   const unassignAgentTasks = async (agentId) => {
     setIsLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/unassign-agent`, {
+      await fetch(`${API_BASE_URL}/unassign-agent`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ agentId }),
       });
-      await res.json();
       await loadDataFromServer();
     } catch (error) {
       console.error('Error unassigning agent tasks:', error);
@@ -202,11 +204,10 @@ function App() {
   const unassignAllTasks = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/unassign-all`, {
+      await fetch(`${API_BASE_URL}/unassign-all`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });
-      await res.json();
       await loadDataFromServer();
     } catch (error) {
       console.error('Error unassigning all tasks:', error);
@@ -215,7 +216,7 @@ function App() {
     }
   };
 
-  // --- CSV Download Functions ---
+  // CSV downloads
   const downloadCompletedCSV = () => {
     window.open(`${API_BASE_URL}/download/completed-assignments`, '_blank');
   };
@@ -223,13 +224,14 @@ function App() {
     window.open(`${API_BASE_URL}/download/unassigned-products`, '_blank');
   };
 
-  // --- View Switching ---
+  // View switching
   const handleViewChange = (newView) => {
     setView(newView);
     setMenuOpen(false);
+    setSelectedAgent(null); // reset selected agent if user navigates away
   };
 
-  // --- Confirmation Dialog ---
+  // Confirmation dialog
   const showConfirmDialog = (title, text, onConfirm) => {
     setConfirmDialog({ show: true, title, message: text, onConfirm });
   };
@@ -257,7 +259,7 @@ function App() {
     );
   };
 
-  // --- Side Menu (slides from left) ---
+  // Side menu (slides from left, fully hidden if not open)
   const renderSideMenu = () => (
     <div className={`side-menu ${menuOpen ? 'open' : ''} ${darkMode ? 'dark-mode' : 'light-mode'}`}>
       <button className="close-menu-btn" onClick={toggleMenu}>✕</button>
@@ -297,7 +299,7 @@ function App() {
     </div>
   );
 
-  // --- Header (hamburger menu on left, brand on left) ---
+  // Header
   const renderHeader = () => (
     <header className={`app-header ${darkMode ? 'dark-mode' : ''}`}>
       <div className="header-left">
@@ -314,10 +316,18 @@ function App() {
     </header>
   );
 
-  // --- Agent Directory View ---
+  // Agent Directory with system status
   const renderAgentDirectory = () => (
     <div className="agent-list-section">
       <h2>Agent Directory</h2>
+      <div className="system-status-cards">
+        <div className="status-card">
+          <h3>System Status</h3>
+          <p>Total Agents: {totalAgents}</p>
+          <p>Total Products: {totalProducts}</p>
+          <p>Total Assignments: {totalAssignments}</p>
+        </div>
+      </div>
       <div className="search-box">
         <input
           type="text"
@@ -336,6 +346,7 @@ function App() {
               <th>Name</th>
               <th>Role</th>
               <th>Workload</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -344,10 +355,21 @@ function App() {
                 agent.name.toLowerCase().includes(searchTerm.toLowerCase())
               )
               .map((agent) => (
-                <tr key={agent.id} onClick={() => setSelectedAgent(agent.id)}>
+                <tr key={agent.id}>
                   <td>{agent.name}</td>
                   <td>{agent.role}</td>
                   <td>{agent.currentAssignments.length} / {agent.capacity}</td>
+                  <td>
+                    <button
+                      className="view-dashboard-btn"
+                      onClick={() => {
+                        setSelectedAgent(agent.id);
+                        setView('agent-dashboard');
+                      }}
+                    >
+                      View Dashboard
+                    </button>
+                  </td>
                 </tr>
               ))}
           </tbody>
@@ -356,41 +378,104 @@ function App() {
     </div>
   );
 
-  // --- Agent Dashboard View ---
+  // Agent Dashboard
   const renderAgentDashboard = () => {
     const agent = agents.find((a) => a.id === selectedAgent);
-    if (!agent) return null;
+    if (!agent) return <p>Agent not found.</p>;
+
+    // Find the tasks from assignments (not completed, not unassigned)
+    const agentAssignments = assignments.filter((a) =>
+      a.agentId === agent.id && !a.completed && !a.unassignedTime
+    );
+
     return (
       <div className="view-section">
-        <button className="back-button" onClick={() => setSelectedAgent(null)}>
-          Back to Agent Directory
-        </button>
         <h2>{agent.name} - Dashboard</h2>
-        <p>{agent.role} • {agent.currentAssignments.length} / {agent.capacity} tasks</p>
-        <div className="action-buttons">
-          <button className="action-btn" onClick={() => requestTask(agent.id)} disabled={isLoading}>
+        <p>{agent.role} • {agentAssignments.length} / {agent.capacity} tasks</p>
+        <div className="dashboard-actions">
+          <button
+            className="request-task-btn"
+            onClick={() => requestTask(agent.id)}
+            disabled={isLoading}
+          >
             Request Task
           </button>
-          <button className="action-btn" onClick={() => completeAllTasksForAgent(agent.id)} disabled={isLoading || agent.currentAssignments.length === 0}>
-            Complete All Tasks
+          <button
+            className="unassign-all-btn"
+            onClick={() => unassignAgentTasks(agent.id)}
+            disabled={isLoading || agentAssignments.length === 0}
+          >
+            Unassign Tasks
+          </button>
+          <button
+            className="complete-all-btn"
+            onClick={() => completeAllTasksForAgent(agent.id)}
+            disabled={isLoading || agentAssignments.length === 0}
+          >
+            Complete All
           </button>
         </div>
-        <div>
-          {/* Additional agent dashboard details and per-task actions can go here */}
-          <p>[Agent tasks table here]</p>
-        </div>
+
+        {agentAssignments.length === 0 ? (
+          <p>No tasks assigned.</p>
+        ) : (
+          <table className="assignments-table">
+            <thead>
+              <tr>
+                <th>Product ID</th>
+                <th>Count</th>
+                <th>Assigned On</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {agentAssignments.map((assign) => {
+                return (
+                  <tr key={assign.id}>
+                    <td>{assign.productId}</td>
+                    <td>{(products.find(p => p.id === assign.productId)?.count) || 1}</td>
+                    <td>{assign.assignedOn || 'N/A'}</td>
+                    <td>
+                      <button
+                        className="complete-task-btn"
+                        onClick={() => completeTask(agent.id, assign.productId)}
+                        disabled={isLoading}
+                      >
+                        Complete
+                      </button>
+                      <button
+                        className="unassign-task-btn"
+                        onClick={() => unassignProduct(assign.productId, agent.id)}
+                        disabled={isLoading}
+                      >
+                        Unassign
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+
+        <button
+          className="back-button"
+          onClick={() => {
+            setSelectedAgent(null);
+            setView('agents');
+          }}
+        >
+          Back to Directory
+        </button>
       </div>
     );
   };
 
-  // --- Completed Tasks View ---
+  // Completed Tasks
   const renderCompletedTasks = () => {
     const completed = assignments.filter((a) => a.completed);
     return (
       <div className="view-section">
-        <button className="back-button" onClick={() => setView('agents')}>
-          Back to Agent Directory
-        </button>
         <h2>Completed Tasks</h2>
         <button className="download-completed-btn" onClick={downloadCompletedCSV}>
           Download Completed CSV
@@ -403,41 +488,36 @@ function App() {
               <tr>
                 <th>Assignment ID</th>
                 <th>Agent ID</th>
-                <th>Completed By</th>
                 <th>Product ID</th>
                 <th>Assigned On</th>
                 <th>Completed On</th>
               </tr>
             </thead>
             <tbody>
-              {completed.map((c) => {
-                const agent = agents.find((ag) => ag.id === c.agentId);
-                return (
-                  <tr key={c.id}>
-                    <td>{c.id}</td>
-                    <td>{c.agentId}</td>
-                    <td>{agent ? agent.name : 'Unknown'}</td>
-                    <td>{c.productId}</td>
-                    <td>{c.assignedOn}</td>
-                    <td>{c.completedOn}</td>
-                  </tr>
-                );
-              })}
+              {completed.map((c) => (
+                <tr key={c.id}>
+                  <td>{c.id}</td>
+                  <td>{c.agentId}</td>
+                  <td>{c.productId}</td>
+                  <td>{c.assignedOn || 'N/A'}</td>
+                  <td>{c.completedOn || 'N/A'}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         )}
+        <button className="back-button" onClick={() => setView('agents')}>
+          Back to Directory
+        </button>
       </div>
     );
   };
 
-  // --- Available Products (Unassigned) View ---
+  // Available Products (Unassigned)
   const renderAvailableProducts = () => {
     const unassigned = products.filter((p) => !p.assigned);
     return (
       <div className="view-section">
-        <button className="back-button" onClick={() => setView('agents')}>
-          Back to Agent Directory
-        </button>
         <h2>Available Products</h2>
         <button className="download-completed-btn" onClick={downloadUnassignedCSV}>
           Download Unassigned CSV
@@ -459,7 +539,7 @@ function App() {
               {unassigned.map((p) => (
                 <tr key={p.id}>
                   <td>{p.id}</td>
-                  <td>{p.count}</td>
+                  <td>{p.count || 1}</td>
                   <td>{p.tenantId || 'N/A'}</td>
                   <td>{p.priority || 'N/A'}</td>
                   <td>{p.createdOn || 'N/A'}</td>
@@ -468,17 +548,17 @@ function App() {
             </tbody>
           </table>
         )}
+        <button className="back-button" onClick={() => setView('agents')}>
+          Back to Directory
+        </button>
       </div>
     );
   };
 
-  // --- Queue View ---
+  // Queue
   const renderQueue = () => {
     return (
       <div className="view-section">
-        <button className="back-button" onClick={() => setView('agents')}>
-          Back to Agent Directory
-        </button>
         <h2>Queue</h2>
         {products.length === 0 ? (
           <p>No products found.</p>
@@ -500,7 +580,7 @@ function App() {
                 <tr key={p.id}>
                   <td>{p.id}</td>
                   <td>{p.name || 'N/A'}</td>
-                  <td>{p.count}</td>
+                  <td>{p.count || 1}</td>
                   <td>{p.tenantId || 'N/A'}</td>
                   <td>{p.priority || 'N/A'}</td>
                   <td>{p.createdOn || 'N/A'}</td>
@@ -510,24 +590,78 @@ function App() {
             </tbody>
           </table>
         )}
+        <button className="back-button" onClick={() => setView('agents')}>
+          Back to Directory
+        </button>
       </div>
     );
   };
 
-  // --- Main Dashboard Switch ---
+  // Main content switch
   const renderDashboard = () => {
     if (view === 'completed') return renderCompletedTasks();
     if (view === 'available') return renderAvailableProducts();
     if (view === 'queue') return renderQueue();
-    // If an agent is selected, show its dashboard
-    if (selectedAgent) return renderAgentDashboard();
-    return renderAgentDirectory();
+    if (view === 'agent-dashboard' && selectedAgent) return renderAgentDashboard();
+    return renderAgentDirectory(); // default
   };
 
   return (
     <div className={`app ${darkMode ? 'dark-mode' : 'light-mode'}`}>
-      {renderHeader()}
-      {renderSideMenu()}
+      {/* Header */}
+      <header className={`app-header ${darkMode ? 'dark-mode' : ''}`}>
+        <div className="header-left">
+          <button className="hamburger-btn" onClick={toggleMenu}>
+            <svg width="24" height="24"
+                 viewBox="0 0 24 24"
+                 fill={darkMode ? '#fff' : '#000'}>
+              <path d="M3 6h18v2H3V6zm0 5h18v2H3v-2zm0 5h18v2H3v-2z" />
+            </svg>
+          </button>
+          <h1 className="brand-title">Product Assignment</h1>
+        </div>
+        <div className="header-right"></div>
+      </header>
+
+      {/* Side Menu */}
+      <div className={`side-menu ${menuOpen ? 'open' : ''} ${darkMode ? 'dark-mode' : 'light-mode'}`}>
+        <button className="close-menu-btn" onClick={toggleMenu}>✕</button>
+        <nav className="side-menu-nav">
+          <button onClick={() => handleViewChange('agents')} disabled={isLoading}>
+            Agent Directory
+          </button>
+          <button onClick={() => handleViewChange('completed')} disabled={isLoading}>
+            Completed Tasks
+          </button>
+          <button onClick={() => handleViewChange('available')} disabled={isLoading}>
+            Available Products
+          </button>
+          <button onClick={() => handleViewChange('queue')} disabled={isLoading}>
+            Queue
+          </button>
+          <hr />
+          <button onClick={toggleTheme} className="theme-toggle-button">
+            {darkMode ? 'Light Mode' : 'Dark Mode'}
+          </button>
+        </nav>
+        <hr />
+        <div className="menu-upload-section">
+          <label htmlFor="output-csv" className="upload-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                 viewBox="0 0 24 24"
+                 fill={darkMode ? '#fff' : '#0d6efd'}>
+              <path d="M5 20h14v-2H5v2zm7-18L5.33 9h3.84v4h6.66v-4h3.84L12 2z"/>
+            </svg>
+            <span>Upload CSV</span>
+          </label>
+          <input type="file" id="output-csv" accept=".csv"
+                 onChange={handleFileUpload}
+                 disabled={isLoading}
+                 className="file-input" />
+        </div>
+      </div>
+
+      {/* Main Content */}
       <main className="app-content">
         {isLoading && (
           <div className="loading-overlay">

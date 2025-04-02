@@ -1,17 +1,15 @@
-/* Base Styles */
+/* Reset & Base */
 body, html, .app {
   margin: 0;
   padding: 0;
   font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
 
-/* Light Mode */
+/* Light vs. Dark Mode */
 .light-mode {
   background-color: #fff;
   color: #000;
 }
-
-/* Dark Mode */
 .dark-mode {
   background-color: #000;
   color: #fff;
@@ -29,12 +27,9 @@ body, html, .app {
 
 .light-mode .app-header {
   background-color: #fff;
-  color: #000;
 }
-
 .dark-mode .app-header {
   background-color: #111;
-  color: #fff;
 }
 
 .header-left {
@@ -53,7 +48,6 @@ body, html, .app {
 .hamburger-btn svg {
   width: 24px;
   height: 24px;
-  fill: currentColor;
 }
 
 .brand-title {
@@ -62,7 +56,6 @@ body, html, .app {
   font-weight: bold;
 }
 
-/* Header Right (empty) */
 .header-right {
   flex: 1;
   display: flex;
@@ -73,7 +66,7 @@ body, html, .app {
 .side-menu {
   position: fixed;
   top: 0;
-  left: -240px;
+  left: -240px; /* fully hidden offscreen */
   width: 240px;
   height: 100vh;
   background-color: #fff;
@@ -149,7 +142,6 @@ body, html, .app {
   display: flex;
   align-items: center;
   cursor: pointer;
-  color: #0d6efd;
   margin-bottom: 8px;
 }
 
@@ -173,13 +165,11 @@ body, html, .app {
   padding: 20px;
 }
 
-/* Center Agent Directory */
 .agent-list-section {
   max-width: 900px;
   margin: 0 auto;
 }
 
-/* Search Box */
 .search-box {
   display: flex;
   gap: 10px;
@@ -192,7 +182,6 @@ body, html, .app {
   border-radius: 4px;
 }
 
-/* Refresh Button */
 .refresh-button {
   background-color: #0d6efd;
   color: #fff;
@@ -204,6 +193,19 @@ body, html, .app {
 
 .refresh-button:hover {
   background-color: #0a58ca;
+}
+
+/* System status card on Agent Directory */
+.system-status-cards {
+  margin-bottom: 20px;
+}
+
+.status-card {
+  background-color: #f9f9f9;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  margin-bottom: 10px;
 }
 
 /* Tables */
@@ -223,7 +225,48 @@ body, html, .app {
   background-color: #f9f9f9;
 }
 
-/* Download CSV buttons in main content */
+/* View Dashboard button in agent table */
+.view-dashboard-btn {
+  background-color: #2196f3;
+  color: #fff;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.view-dashboard-btn:hover {
+  background-color: #1976d2;
+}
+
+/* Agent Dashboard styling */
+.view-section {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.dashboard-actions, .action-buttons {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.request-task-btn, .unassign-all-btn, .complete-all-btn,
+.complete-task-btn, .unassign-task-btn {
+  background-color: #0d6efd;
+  color: #fff;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.request-task-btn:hover, .unassign-all-btn:hover, .complete-all-btn:hover,
+.complete-task-btn:hover, .unassign-task-btn:hover {
+  background-color: #0a58ca;
+}
+
+/* Download CSV buttons */
 .download-completed-btn {
   background-color: #e91e63;
   color: #fff;
@@ -234,18 +277,11 @@ body, html, .app {
   border-radius: 4px;
   cursor: pointer;
 }
-
 .download-completed-btn:hover {
   background-color: #d81b60;
 }
 
-/* View Section */
-.view-section {
-  max-width: 900px;
-  margin: 0 auto;
-}
-
-/* Back Button */
+/* Back button */
 .back-button {
   background: none;
   border: 1px solid #0d6efd;
@@ -254,7 +290,7 @@ body, html, .app {
   border-radius: 4px;
   cursor: pointer;
   transition: background 0.2s, color 0.2s;
-  margin-bottom: 10px;
+  margin-top: 15px;
 }
 
 .back-button:hover {
@@ -262,7 +298,7 @@ body, html, .app {
   color: #fff;
 }
 
-/* Loading Overlay */
+/* Loading overlay */
 .loading-overlay {
   position: fixed;
   top: 0;
