@@ -8,11 +8,11 @@ const getApiBaseUrl = () => {
 const API_BASE_URL = getApiBaseUrl();
 
 function App() {
-  // Theme and Side Menu state
+  // Theme & Menu
   const [darkMode, setDarkMode] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const toggleTheme = () => setDarkMode(!darkMode);
-  const toggleMenu = () => setMenuOpen(!menuOpen);
+  const toggleTheme = () => setDarkMode((prev) => !prev);
+  const toggleMenu = () => setMenuOpen((prev) => !prev);
 
   // Data states
   const [agents, setAgents] = useState([]);
@@ -71,7 +71,7 @@ function App() {
     }
   }, []);
 
-  // Load previously assigned tasks
+  // Load previously assigned tasks (for "Unassigned Tasks" view)
   const loadPreviouslyAssigned = async () => {
     setIsLoading(true);
     try {
@@ -136,12 +136,12 @@ function App() {
 
   // --- Workload Calculation ---
   const getAgentWorkloadCount = (agentId) => {
-    const agentAssignments = assignments.filter(a =>
-      a.agentId === agentId && !a.completed && !a.unassignedTime
+    const agentAssignments = assignments.filter(
+      (a) => a.agentId === agentId && !a.completed && !a.unassignedTime
     );
     let sum = 0;
-    agentAssignments.forEach(assign => {
-      const product = products.find(p => p.id === assign.productId);
+    agentAssignments.forEach((assign) => {
+      const product = products.find((p) => p.id === assign.productId);
       const count = product && product.count ? parseInt(product.count, 10) : 1;
       sum += count;
     });
@@ -298,50 +298,45 @@ function App() {
   };
 
   // --- Render Functions for Views ---
-
-  // Render Queue view
-  const renderQueue = () => {
-    return (
-      <div className="view-section">
-        <h2>Queue</h2>
-        {products.length === 0 ? (
-          <p>No products found.</p>
-        ) : (
-          <table className="assignments-table">
-            <thead>
-              <tr>
-                <th>Abstract ID</th>
-                <th>Name</th>
-                <th>Count</th>
-                <th>Tenant ID</th>
-                <th>Priority</th>
-                <th>Created On</th>
-                <th>Assigned</th>
+  const renderQueue = () => (
+    <div className="view-section">
+      <h2>Queue</h2>
+      {products.length === 0 ? (
+        <p>No products found.</p>
+      ) : (
+        <table className="assignments-table">
+          <thead>
+            <tr>
+              <th>Abstract ID</th>
+              <th>Name</th>
+              <th>Count</th>
+              <th>Tenant ID</th>
+              <th>Priority</th>
+              <th>Created On</th>
+              <th>Assigned</th>
+            </tr>
+          </thead>
+          <tbody>
+            {products.map((p) => (
+              <tr key={p.id}>
+                <td>{p.id}</td>
+                <td>{p.name || 'N/A'}</td>
+                <td>{p.count || 1}</td>
+                <td>{p.tenantId || 'N/A'}</td>
+                <td>{p.priority || 'N/A'}</td>
+                <td>{p.createdOn || 'N/A'}</td>
+                <td>{p.assigned ? 'Yes' : 'No'}</td>
               </tr>
-            </thead>
-            <tbody>
-              {products.map((p) => (
-                <tr key={p.id}>
-                  <td>{p.id}</td>
-                  <td>{p.name || 'N/A'}</td>
-                  <td>{p.count || 1}</td>
-                  <td>{p.tenantId || 'N/A'}</td>
-                  <td>{p.priority || 'N/A'}</td>
-                  <td>{p.createdOn || 'N/A'}</td>
-                  <td>{p.assigned ? 'Yes' : 'No'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-        <button className="back-button" onClick={() => setView('agents')}>
-          Back to Directory
-        </button>
-      </div>
-    );
-  };
+            ))}
+          </tbody>
+        </table>
+      )}
+      <button className="back-button" onClick={() => setView('agents')}>
+        Back to Directory
+      </button>
+    </div>
+  );
 
-  // Render Agent Directory view
   const renderAgentDirectory = () => (
     <div className="agent-list-section">
       <h2>Agent Directory</h2>
@@ -408,15 +403,12 @@ function App() {
     </div>
   );
 
-  // Render Agent Dashboard view
   const renderAgentDashboard = () => {
     const agent = agents.find((a) => a.id === selectedAgent);
     if (!agent) return <p>Agent not found.</p>;
-
     const agentAssignments = assignments.filter(
       (a) => a.agentId === agent.id && !a.completed && !a.unassignedTime
     );
-
     return (
       <div className="view-section">
         <h2>{agent.name} - Dashboard</h2>
@@ -505,9 +497,8 @@ function App() {
     );
   };
 
-  // Render Completed Tasks view
   const renderCompletedTasks = () => {
-    const completed = assignments.filter(a => a.completed);
+    const completed = assignments.filter((a) => a.completed);
     return (
       <div className="view-section">
         <h2>Completed Tasks</h2>
@@ -547,9 +538,8 @@ function App() {
     );
   };
 
-  // Render Available Products view
   const renderAvailableProducts = () => {
-    const unassigned = products.filter(p => !p.assigned);
+    const unassigned = products.filter((p) => !p.assigned);
     return (
       <div className="view-section">
         <h2>Available Products</h2>
@@ -589,17 +579,6 @@ function App() {
     );
   };
 
-  // --- Main Dashboard Switch ---
-  const renderDashboard = () => {
-    if (view === 'completed') return renderCompletedTasks();
-    if (view === 'available') return renderAvailableProducts();
-    if (view === 'queue') return renderQueue();
-    if (view === 'unassigned') return renderPreviouslyAssigned();
-    if (view === 'agent-dashboard' && selectedAgent) return renderAgentDashboard();
-    return renderAgentDirectory();
-  };
-
-  // Render Unassigned Tasks view (Previously Assigned)
   const renderPreviouslyAssigned = () => {
     return (
       <div className="view-section">
@@ -639,6 +618,16 @@ function App() {
         </button>
       </div>
     );
+  };
+
+  // Main dashboard switch
+  const renderDashboard = () => {
+    if (view === 'completed') return renderCompletedTasks();
+    if (view === 'available') return renderAvailableProducts();
+    if (view === 'queue') return renderQueue();
+    if (view === 'unassigned') return renderPreviouslyAssigned();
+    if (view === 'agent-dashboard' && selectedAgent) return renderAgentDashboard();
+    return renderAgentDirectory();
   };
 
   return (
