@@ -3,7 +3,8 @@ body, html, .app {
   margin: 0;
   padding: 0;
   font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-  background-color: #f2f2f2;
+  background-color: #fff; /* White background */
+  color: #000; /* Black text by default */
 }
 
 /* Header */
@@ -11,12 +12,12 @@ body, html, .app {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background-color: #202124;
+  background-color: #000; /* Black header */
   padding: 12px 20px;
-  color: #e8eaed;
   position: relative;
 }
 
+/* Left Upload Icon */
 .header-left .manual-upload {
   display: flex;
   align-items: center;
@@ -27,40 +28,47 @@ body, html, .app {
   align-items: center;
   cursor: pointer;
   margin-right: 8px;
+  /* White icon on black background */
 }
 
 .file-input {
   display: none;
 }
 
+/* Right Nav Buttons */
 .header-right .nav-choices button {
   background: none;
-  border: 1px solid transparent;
-  color: #e8eaed;
+  border: 1px solid #0d6efd; /* Blue border */
+  color: #0d6efd;           /* Blue text */
   margin-left: 12px;
   font-size: 14px;
-  padding: 8px 12px;
+  padding: 6px 12px;
   cursor: pointer;
-  transition: background-color 0.3s, border-color 0.3s;
+  border-radius: 4px;
+  transition: background-color 0.2s, color 0.2s;
 }
 
 .header-right .nav-choices button:hover {
-  background-color: #3c4043;
-  border-color: #5f6368;
+  background-color: #0d6efd;
+  color: #fff; /* White text on blue hover */
 }
 
 .header-right .nav-choices button:disabled {
   opacity: 0.5;
+  cursor: not-allowed;
 }
 
-/* Message */
+/* Message (centered below header if needed) */
 .message {
   margin-top: 8px;
   padding: 6px 10px;
-  background-color: #fff3cd;
-  color: #856404;
-  border: 1px solid #ffeeba;
+  background-color: #fff; 
+  border: 1px solid #0d6efd; /* Blue border for emphasis */
   border-radius: 4px;
+  color: #000;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 /* Dashboard & Status Cards */
@@ -77,12 +85,18 @@ body, html, .app {
 }
 
 .status-card {
-  background-color: #ffffff;
+  background-color: #fff;
   padding: 16px;
+  border: 1px solid #ccc; 
   border-radius: 6px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
   width: 260px;
   text-align: center;
+}
+
+.status-card h3 {
+  margin-top: 0;
+  margin-bottom: 12px;
+  color: #000; 
 }
 
 .status-item {
@@ -106,11 +120,15 @@ body, html, .app {
   padding: 8px;
   border: 1px solid #ccc;
   border-radius: 4px;
+  color: #000;
+  background-color: #fff;
 }
 
 /* Button Groups & Actions */
 .button-group {
   margin-top: 16px;
+  display: flex;
+  gap: 12px;
 }
 
 .agent-actions .action-row {
@@ -119,7 +137,7 @@ body, html, .app {
   margin-top: 10px;
 }
 
-/* Custom Action Buttons */
+/* Generic Action Button Style */
 .action-btn {
   flex: 1;
   padding: 10px;
@@ -127,41 +145,27 @@ body, html, .app {
   font-weight: 600;
   cursor: pointer;
   border-radius: 4px;
-  color: #fff;
-  transition: background-color 0.3s, transform 0.2s;
+  color: #fff; /* White text */
+  background-color: #0d6efd; /* Blue background */
+  transition: background-color 0.2s, transform 0.2s;
+  text-align: center;
 }
 
-.unassign-task-button.action-btn {
-  background: linear-gradient(45deg, #d32f2f, #c62828);
-}
-
-.unassign-task-button.action-btn:hover {
-  background: linear-gradient(45deg, #c62828, #b71c1c);
+.action-btn:hover {
+  background-color: #0a58ca; /* Darker blue on hover */
   transform: translateY(-2px);
 }
 
-.complete-all-button.action-btn {
-  background: linear-gradient(45deg, #3949ab, #303f9f);
+/* Variation for Unassign / Complete */
+.unassign-task-button.action-btn,
+.unassign-all-button.action-btn,
+.complete-all-button.action-btn,
+.complete-button.action-btn {
+  background-color: #0d6efd; 
 }
 
-.complete-all-button.action-btn:hover {
-  background: linear-gradient(45deg, #303f9f, #283593);
-  transform: translateY(-2px);
-}
-
-.request-button.action-btn,
-.view-button.action-btn,
-.unassign-button.action-btn {
-  background: linear-gradient(45deg, #43a047, #388e3c);
-  padding: 10px 15px;
-  border-radius: 4px;
-}
-
-.request-button.action-btn:hover,
-.view-button.action-btn:hover,
-.unassign-button.action-btn:hover {
-  transform: translateY(-2px);
-}
+/* If you want each button labeled differently, 
+   you can create more classes or keep them uniform. */
 
 /* Table Styling */
 .assignments-table {
@@ -174,18 +178,20 @@ body, html, .app {
   border: 1px solid #ddd;
   padding: 10px;
   font-size: 14px;
+  color: #000;
 }
 
 .assignments-table th {
-  background-color: #e0e0e0;
+  background-color: #f9f9f9; 
 }
 
+/* We remove highlight colors for assigned/unassigned rows. 
+   Keep everything white & black. */
 .assigned-row {
-  background-color: #e8f5e9;
+  background-color: #fefefe; /* Subtle difference if you want */
 }
-
 .previously-assigned-row {
-  background-color: #fffde7;
+  background-color: #fafafa;
 }
 
 /* Loading Overlay */
@@ -204,7 +210,7 @@ body, html, .app {
 
 .spinner-large {
   border: 8px solid #f3f3f3;
-  border-top: 8px solid #333;
+  border-top: 8px solid #000; /* Black spinner */
   border-radius: 50%;
   width: 60px;
   height: 60px;
@@ -222,7 +228,7 @@ body, html, .app {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0,0,0,0.5);
+  background: rgba(0,0,0,0.4);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -235,6 +241,7 @@ body, html, .app {
   border-radius: 6px;
   width: 300px;
   text-align: center;
+  color: #000;
 }
 
 .confirm-buttons {
@@ -249,14 +256,27 @@ body, html, .app {
   border-radius: 4px;
   font-weight: 600;
   cursor: pointer;
+  color: #fff; 
 }
 
 .cancel-button {
-  background-color: #757575;
-  color: #fff;
+  background-color: #000; /* Black */
 }
 
 .confirm-button {
-  background-color: #43a047;
+  background-color: #0d6efd; /* Blue */
+}
+
+.back-button {
+  background: none;
+  border: 1px solid #0d6efd;
+  color: #0d6efd;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+}
+.back-button:hover {
+  background-color: #0d6efd;
   color: #fff;
 }
