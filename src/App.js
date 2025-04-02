@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import './App.css';
 
-// Helper function to format a date string to EST
+// Helper function to format a date string to EST (US Eastern Time)
 const formatEST = (dateStr) => {
   if (!dateStr) return 'N/A';
   return new Date(dateStr).toLocaleString('en-US', { timeZone: 'America/New_York' });
@@ -40,7 +40,7 @@ function App() {
   const [view, setView] = useState('agents');
   const [selectedAgent, setSelectedAgent] = useState(null);
 
-  // Confirmation dialog state (if needed later)
+  // Confirmation dialog state (if needed)
   const [confirmDialog, setConfirmDialog] = useState({
     show: false,
     title: '',
@@ -110,7 +110,7 @@ function App() {
       const res = await fetch(`${API_BASE_URL}/previously-assigned`);
       if (!res.ok) throw new Error('Failed to load unassigned tasks');
       const data = await res.json();
-      // Filter tasks that have unassignedTime (i.e. manually unassigned tasks)
+      // Filter tasks that have an unassignedTime (manually unassigned tasks)
       const filtered = data.filter(task => task.unassignedTime);
       setPreviouslyAssigned(filtered);
     } catch (error) {
@@ -182,8 +182,41 @@ function App() {
     return sum;
   };
 
-  // --- Action Functions ---
+  // --- Updated Request Task Function with SLA Logic ---
   const requestTask = async (agentId) => {
+    const availableProducts = products.filter(p => !p.assigned);
+    if (availableProducts.length === 0) {
+      alert("No available products.");
+      return;
+    }
+    // For each product, set SLA based on priority.
+    // Assume priority field is "P1", "P2", "P3".
+    const now = new Date();
+    const productsWithSlaDiff = availableProducts.map(p => {
+      let slaHours = 24; // default
+      if (p.priority === 'P1') {
+        slaHours = 2;
+      } else if (p.priority === 'P2') {
+        slaHours = 12;
+      } else if (p.priority === 'P3') {
+        slaHours = 24;
+      }
+      const slaMs = slaHours * 60 * 60 * 1000;
+      const created = new Date(p.createdOn);
+      const timePassed = now - created;
+      const diff = slaMs - timePassed; // positive: remaining time; negative: overdue
+      return { ...p, slaDiff: diff };
+    });
+    // If any products are within SLA (diff > 0), choose the one with smallest positive diff.
+    // Otherwise, choose the one with largest negative diff (i.e., most overdue).
+    const withinSla = productsWithSlaDiff.filter(p => p.slaDiff > 0);
+    let selectedProduct;
+    if (withinSla.length > 0) {
+      selectedProduct = withinSla.reduce((prev, curr) => (prev.slaDiff < curr.slaDiff ? prev : curr));
+    } else {
+      selectedProduct = productsWithSlaDiff.reduce((prev, curr) => (prev.slaDiff < curr.slaDiff ? prev : curr));
+    }
+    // Check capacity
     const workloadCount = getAgentWorkloadCount(agentId);
     if (workloadCount >= 30) {
       alert("Please complete or unassign some tasks before requesting new ones (max capacity = 30).");
@@ -194,7 +227,7 @@ function App() {
       await fetch(`${API_BASE_URL}/assign`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agentId }),
+        body: JSON.stringify({ agentId, productId: selectedProduct.id }),
       });
       await loadDataFromServer();
     } catch (error) {
@@ -397,7 +430,9 @@ function App() {
       </div>
       <div className="search-box">
         <input type="text" placeholder="Search agents..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-        <button onClick={handleRefreshData} className="refresh-button">Refresh</button>
+        <button onClick={handleRefreshData} className="refresh-button">
+          Refresh
+        </button>
       </div>
       {agents.length === 0 ? (
         <p>No agents found.</p>
@@ -517,7 +552,7 @@ function App() {
   // Render Completed Tasks View (grouped by Product ID)
   const renderCompletedTasks = () => {
     const completed = assignments.filter(a => a.completed);
-    // Group completed tasks by productId
+    // Group completed tasks by product ID
     const grouped = {};
     completed.forEach(c => {
       const key = c.productId;
@@ -582,7 +617,7 @@ function App() {
     );
   };
 
-  // Render Available Products View (without CSV download button)
+  // Render Available Products View (no CSV download button here)
   const renderAvailableProducts = () => {
     const unassigned = products.filter(p => !p.assigned);
     return (
@@ -640,7 +675,7 @@ function App() {
                 <th>Tenant ID</th>
                 <th>Priority</th>
                 <th>Created On</th>
-                <th>Unassigned Time</th>
+                <th>Unassigned Time (EST)</th>
                 <th>Unassigned By</th>
               </tr>
             </thead>
