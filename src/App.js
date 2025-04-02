@@ -1,10 +1,21 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import './App.css';
 
-// Helper function to format a date string to EST
+// Helper function to format a date string to EST.
+// If your backend date strings lack timezone info, appending " UTC" forces UTC interpretation.
+// If your dates already include timezone info, remove the " UTC" addition.
 const formatEST = (dateStr) => {
   if (!dateStr) return 'N/A';
-  return new Date(dateStr).toLocaleString('en-US', { timeZone: 'America/New_York' });
+  const date = new Date(dateStr.endsWith('Z') ? dateStr : dateStr + ' UTC');
+  return date.toLocaleString('en-US', { 
+    timeZone: 'America/New_York', 
+    hour12: true, 
+    year: 'numeric', 
+    month: 'numeric', 
+    day: 'numeric', 
+    hour: '2-digit', 
+    minute: '2-digit' 
+  });
 };
 
 const getApiBaseUrl = () => {
@@ -17,15 +28,15 @@ function App() {
   // Theme & Menu state
   const [darkMode, setDarkMode] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const toggleTheme = () => setDarkMode((prev) => !prev);
-  const toggleMenu = () => setMenuOpen((prev) => !prev);
+  const toggleTheme = () => setDarkMode(prev => !prev);
+  const toggleMenu = () => setMenuOpen(prev => !prev);
 
   // Data states
   const [agents, setAgents] = useState([]);
   const [products, setProducts] = useState([]);
   const [assignments, setAssignments] = useState([]);
   const [previouslyAssigned, setPreviouslyAssigned] = useState([]);
-
+  
   // System status
   const [totalAgents, setTotalAgents] = useState(0);
   const [totalProducts, setTotalProducts] = useState(0);
@@ -40,7 +51,7 @@ function App() {
   const [view, setView] = useState('agents');
   const [selectedAgent, setSelectedAgent] = useState(null);
 
-  // Confirmation dialog state (if needed)
+  // Confirmation dialog state (if needed later)
   const [confirmDialog, setConfirmDialog] = useState({
     show: false,
     title: '',
@@ -108,7 +119,7 @@ function App() {
       const res = await fetch(`${API_BASE_URL}/previously-assigned`);
       if (!res.ok) throw new Error('Failed to load unassigned tasks');
       const data = await res.json();
-      // Filter out tasks that don't have an unassignedTime (i.e. not manually unassigned)
+      // Only include tasks with unassignedTime (manually unassigned tasks)
       const filtered = data.filter(task => task.unassignedTime);
       setPreviouslyAssigned(filtered);
     } catch (error) {
@@ -189,7 +200,7 @@ function App() {
       return;
     }
     const now = new Date();
-    // For each available product, determine its SLA in milliseconds based on priority
+    // For each available product, determine its SLA in ms based on priority.
     const productsWithSlaDiff = availableProducts.map(p => {
       let slaHours = 24; // default SLA
       if (p.priority === 'P1') {
@@ -202,7 +213,7 @@ function App() {
       const slaMs = slaHours * 60 * 60 * 1000;
       const created = new Date(p.createdOn);
       const timePassed = now - created;
-      // diff > 0 means remaining time, diff < 0 means overdue.
+      // diff > 0 means remaining time, diff < 0 means overdue
       const diff = slaMs - timePassed;
       return { ...p, slaDiff: diff };
     });
@@ -541,7 +552,6 @@ function App() {
     );
   };
 
-  // Render Completed Tasks View (grouped by Product ID and using SLA formatted dates)
   const renderCompletedTasks = () => {
     const completed = assignments.filter(a => a.completed);
     // Group completed tasks by productId
@@ -609,7 +619,6 @@ function App() {
     );
   };
 
-  // Render Available Products View (no CSV download button here)
   const renderAvailableProducts = () => {
     const unassigned = products.filter(p => !p.assigned);
     return (
@@ -648,7 +657,6 @@ function App() {
     );
   };
 
-  // Render Unassigned Tasks View
   const renderPreviouslyAssigned = () => {
     return (
       <div className="view-section">
@@ -693,7 +701,6 @@ function App() {
     );
   };
 
-  // --- Main Dashboard Switch ---
   const renderDashboard = () => {
     if (view === 'completed') return renderCompletedTasks();
     if (view === 'available') return renderAvailableProducts();
