@@ -5,24 +5,21 @@ body, html, .app {
   font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
 
-/* Light vs. Dark Mode */
+/* Light Mode */
 .light-mode {
   background-color: #fff;
   color: #000;
 }
+
+/* Dark Mode */
 .dark-mode {
   background-color: #000;
   color: #fff;
 }
 
-/* Additional color fixes for dark mode text */
-.dark-mode h1,
-.dark-mode h2,
-.dark-mode h3,
-.dark-mode h4,
-.dark-mode p,
-.dark-mode th,
-.dark-mode td {
+/* Ensure text in dark mode is visible */
+.dark-mode h1, .dark-mode h2, .dark-mode h3, .dark-mode p, 
+.dark-mode th, .dark-mode td {
   color: #fff;
 }
 
@@ -32,7 +29,6 @@ body, html, .app {
   align-items: center;
   justify-content: flex-start;
   padding: 12px 20px;
-  position: relative;
   border-bottom: 1px solid #ccc;
 }
 
@@ -59,6 +55,7 @@ body, html, .app {
 .hamburger-btn svg {
   width: 24px;
   height: 24px;
+  fill: currentColor;
 }
 
 .brand-title {
@@ -73,11 +70,11 @@ body, html, .app {
   justify-content: flex-end;
 }
 
-/* Side Menu (slides from left) */
+/* Side Menu (fully hidden when not open) */
 .side-menu {
   position: fixed;
   top: 0;
-  left: -240px; /* hidden */
+  left: -240px;
   width: 240px;
   height: 100vh;
   background-color: #fff;
@@ -220,7 +217,7 @@ body, html, .app {
 }
 
 .dark-mode .status-card {
-  background-color: #222; /* darker background in dark mode */
+  background-color: #222;
   border: 1px solid #444;
   color: #fff;
 }
@@ -245,10 +242,9 @@ body, html, .app {
 .dark-mode .agents-table th,
 .dark-mode .assignments-table th {
   background-color: #222;
-  color: #fff;
 }
 
-/* View Dashboard button in agent table */
+/* View Dashboard button */
 .view-dashboard-btn {
   background-color: #2196f3;
   color: #fff;
@@ -268,7 +264,7 @@ body, html, .app {
   margin: 0 auto;
 }
 
-.dashboard-actions {
+.dashboard-actions, .action-buttons {
   display: flex;
   gap: 10px;
   margin-bottom: 10px;
@@ -289,7 +285,7 @@ body, html, .app {
   background-color: #0a58ca;
 }
 
-/* Download CSV buttons (Completed, Available, etc.) */
+/* Download CSV buttons */
 .download-completed-btn {
   background-color: #e91e63;
   color: #fff;
@@ -300,11 +296,12 @@ body, html, .app {
   border-radius: 4px;
   cursor: pointer;
 }
+
 .download-completed-btn:hover {
   background-color: #d81b60;
 }
 
-/* Back button */
+/* Back Button */
 .back-button {
   background: none;
   border: 1px solid #0d6efd;
@@ -312,8 +309,8 @@ body, html, .app {
   padding: 6px 12px;
   border-radius: 4px;
   cursor: pointer;
-  transition: background 0.2s, color 0.2s;
   margin-top: 15px;
+  transition: background 0.2s, color 0.2s;
 }
 
 .back-button:hover {
@@ -321,7 +318,7 @@ body, html, .app {
   color: #fff;
 }
 
-/* Loading overlay */
+/* Loading Overlay */
 .loading-overlay {
   position: fixed;
   top: 0;
