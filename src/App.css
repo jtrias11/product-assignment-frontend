@@ -26,6 +26,7 @@ body, html, .app {
   display: flex;
   align-items: center;
   cursor: pointer;
+  margin-right: 8px;
 }
 
 .file-input {
@@ -33,18 +34,20 @@ body, html, .app {
 }
 
 .header-right .nav-choices button {
-  background: none;
+  background: linear-gradient(45deg, #5c6bc0, #3949ab);
   border: none;
   color: #fff;
   margin-left: 15px;
   font-size: 14px;
-  padding: 6px 10px;
+  padding: 8px 12px;
+  border-radius: 4px;
   cursor: pointer;
-  transition: background 0.3s;
+  transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .header-right .nav-choices button:hover {
-  background-color: rgba(255,255,255,0.2);
+  transform: translateY(-2px);
+  box-shadow: 0px 4px 6px rgba(0,0,0,0.2);
 }
 
 .header-right .nav-choices button:disabled {
@@ -126,23 +129,37 @@ body, html, .app {
   cursor: pointer;
   border-radius: 4px;
   color: #fff;
-  transition: background 0.3s;
+  transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .unassign-task-button.action-btn {
-  background-color: #e53935;
+  background: linear-gradient(45deg, #ef5350, #e53935);
 }
 
 .unassign-task-button.action-btn:hover {
-  background-color: #d32f2f;
+  transform: translateY(-2px);
+  box-shadow: 0px 4px 6px rgba(0,0,0,0.2);
 }
 
 .complete-all-button.action-btn {
-  background-color: #3949ab;
+  background: linear-gradient(45deg, #5c6bc0, #3949ab);
 }
 
 .complete-all-button.action-btn:hover {
-  background-color: #303f9f;
+  transform: translateY(-2px);
+  box-shadow: 0px 4px 6px rgba(0,0,0,0.2);
+}
+
+/* Request and View Buttons */
+.request-button.action-btn, .view-button.action-btn, .unassign-button.action-btn {
+  background: linear-gradient(45deg, #66bb6a, #43a047);
+  padding: 10px 15px;
+  border-radius: 4px;
+}
+
+.request-button.action-btn:hover, .view-button.action-btn:hover, .unassign-button.action-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0px 4px 6px rgba(0,0,0,0.2);
 }
 
 /* Table Styling */

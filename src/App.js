@@ -60,7 +60,7 @@ function App() {
     loadDataFromServer();
   }, [loadDataFromServer]);
 
-  // File upload handler using icon
+  // File upload handler using an icon for data upload.
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -359,13 +359,13 @@ function App() {
     );
   };
 
-  // Render header with data upload icon on left and navigation on right.
+  // Render header with a data upload icon on left and navigation on right.
   const renderHeader = () => (
     <header className="app-header">
       <div className="header-left">
         <div className="manual-upload">
           <label htmlFor="output-csv" className="upload-icon">
-            {/* Inline SVG for upload icon */}
+            {/* Inline SVG for data upload icon */}
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="#fff" viewBox="0 0 24 24">
               <path d="M5 20h14v-2H5v2zm7-18L5.33 9h3.84v4h6.66v-4h3.84L12 2z"/>
             </svg>
@@ -401,7 +401,7 @@ function App() {
         <h2>{agent.name} - Dashboard</h2>
         <p>{agent.role} • {agent.currentAssignments.length} / {agent.capacity} tasks</p>
         <div className="button-group agent-actions">
-          <button className="request-button" onClick={() => requestTask(agent.id)} disabled={isLoading || agent.currentAssignments.length >= agent.capacity}>
+          <button className="request-button action-btn" onClick={() => requestTask(agent.id)} disabled={isLoading || agent.currentAssignments.length >= agent.capacity}>
             {isLoading ? "Processing..." : agent.currentAssignments.length >= agent.capacity ? "Queue Full" : "Request Task"}
           </button>
           {agent.currentAssignments.length > 0 && (
@@ -453,11 +453,11 @@ function App() {
                   <td>{task.createdOn || 'N/A'}</td>
                   <td>
                     <div className="action-buttons">
-                      <button className="complete-button" onClick={() => completeTask(agent.id, task.productId)} disabled={isLoading}>
+                      <button className="complete-button action-btn" onClick={() => completeTask(agent.id, task.productId)} disabled={isLoading}>
                         Complete
                       </button>
                       <button 
-                        className="unassign-task-button" 
+                        className="unassign-task-button action-btn" 
                         onClick={() => showConfirmDialog(
                           "Unassign Task", 
                           `Are you sure you want to unassign Abstract ID ${task.productId}?`,
@@ -514,12 +514,12 @@ function App() {
                 <span className="workload-text">{agent.currentAssignments.length}/{agent.capacity}</span>
               </td>
               <td className="agent-action-buttons">
-                <button className="view-button" onClick={() => setSelectedAgent(agent.id)} disabled={isLoading}>
+                <button className="view-button action-btn" onClick={() => setSelectedAgent(agent.id)} disabled={isLoading}>
                   Dashboard
                 </button>
                 {agent.currentAssignments.length > 0 && (
                   <button 
-                    className="unassign-button" 
+                    className="unassign-button action-btn" 
                     onClick={() => showConfirmDialog(
                       "Unassign All Tasks", 
                       `Are you sure you want to unassign all tasks from ${agent.name}?`,
@@ -746,12 +746,12 @@ function App() {
               <span>{assignments.length}</span>
             </div>
             <div className="button-group">
-              <button className="refresh-button" onClick={handleRefreshData} disabled={isLoading}>
+              <button className="refresh-button action-btn" onClick={handleRefreshData} disabled={isLoading}>
                 {isLoading ? "Refreshing..." : "Refresh Data"}
               </button>
               {assignments.filter(a => !a.completed && !a.unassignedTime).length > 0 && (
                 <button 
-                  className="unassign-all-button" 
+                  className="unassign-all-button action-btn" 
                   onClick={() => showConfirmDialog(
                     "Unassign All Tasks", 
                     "Are you sure you want to unassign ALL tasks from ALL agents?",
