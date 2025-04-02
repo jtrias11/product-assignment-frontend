@@ -34,7 +34,7 @@ function App() {
   const [view, setView] = useState('agents');
   const [selectedAgent, setSelectedAgent] = useState(null);
 
-  // Confirmation dialog state
+  // Confirmation dialog state (if needed later)
   const [confirmDialog, setConfirmDialog] = useState({
     show: false,
     title: '',
@@ -42,7 +42,7 @@ function App() {
     onConfirm: null,
   });
 
-  // --- Render Helper: Confirmation Dialog ---
+  // --- Render Confirm Dialog ---
   const renderConfirmDialog = () => {
     if (!confirmDialog.show) return null;
     return (
@@ -104,7 +104,9 @@ function App() {
       const res = await fetch(`${API_BASE_URL}/previously-assigned`);
       if (!res.ok) throw new Error('Failed to load unassigned tasks');
       const data = await res.json();
-      setPreviouslyAssigned(data);
+      // Filter out any tasks that are actually completed
+      const filtered = data.filter(task => task.unassignedTime);
+      setPreviouslyAssigned(filtered);
     } catch (error) {
       console.error('Error loading unassigned tasks:', error);
     } finally {
@@ -325,13 +327,7 @@ function App() {
       <hr />
       <div className="menu-upload-section">
         <label htmlFor="output-csv" className="upload-icon">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill={darkMode ? '#fff' : '#0d6efd'}
-          >
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill={darkMode ? '#fff' : '#0d6efd'}>
             <path d="M5 20h14v-2H5v2zm7-18L5.33 9h3.84v4h6.66v-4h3.84L12 2z" />
           </svg>
           <span>Upload CSV</span>
@@ -351,7 +347,7 @@ function App() {
         <table className="assignments-table">
           <thead>
             <tr>
-              <th>Abstract ID</th>
+              <th className="product-id">Abstract ID</th>
               <th>Name</th>
               <th>Count</th>
               <th>Tenant ID</th>
@@ -363,7 +359,7 @@ function App() {
           <tbody>
             {products.map((p) => (
               <tr key={p.id}>
-                <td>{p.id}</td>
+                <td className="product-id">{p.id}</td>
                 <td>{p.name || 'N/A'}</td>
                 <td>{p.count || 1}</td>
                 <td>{p.tenantId || 'N/A'}</td>
@@ -395,7 +391,9 @@ function App() {
       </div>
       <div className="search-box">
         <input type="text" placeholder="Search agents..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-        <button onClick={handleRefreshData} className="refresh-button">Refresh</button>
+        <button onClick={handleRefreshData} className="refresh-button">
+          Refresh
+        </button>
       </div>
       {agents.length === 0 ? (
         <p>No agents found.</p>
@@ -410,21 +408,25 @@ function App() {
             </tr>
           </thead>
           <tbody>
-            {agents.filter(agent => agent.name.toLowerCase().includes(searchTerm.toLowerCase())).map((agent) => {
-              const workloadCount = getAgentWorkloadCount(agent.id);
-              return (
-                <tr key={agent.id}>
-                  <td>{agent.name}</td>
-                  <td>{agent.role}</td>
-                  <td>{workloadCount}/30</td>
-                  <td>
-                    <button className="view-dashboard-btn" onClick={() => { setSelectedAgent(agent.id); setView('agent-dashboard'); }}>
-                      View Dashboard
-                    </button>
-                  </td>
-                </tr>
-              );
-            })}
+            {agents
+              .filter((agent) =>
+                agent.name.toLowerCase().includes(searchTerm.toLowerCase())
+              )
+              .map((agent) => {
+                const workloadCount = getAgentWorkloadCount(agent.id);
+                return (
+                  <tr key={agent.id}>
+                    <td>{agent.name}</td>
+                    <td>{agent.role}</td>
+                    <td>{workloadCount}/30</td>
+                    <td>
+                      <button className="view-dashboard-btn" onClick={() => { setSelectedAgent(agent.id); setView('agent-dashboard'); }}>
+                        View Dashboard
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
           </tbody>
         </table>
       )}
@@ -433,9 +435,12 @@ function App() {
 
   // Render Agent Dashboard View
   const renderAgentDashboard = () => {
-    const agent = agents.find(a => a.id === selectedAgent);
+    const agent = agents.find((a) => a.id === selectedAgent);
     if (!agent) return <p>Agent not found.</p>;
-    const agentAssignments = assignments.filter(a => a.agentId === agent.id && !a.completed && !a.unassignedTime);
+    const agentAssignments = assignments.filter(
+      (a) => a.agentId === agent.id && !a.completed && !a.unassignedTime
+    );
+    // For copy functionality, the Product ID column already has class "product-id"
     return (
       <div className="view-section">
         <h2>{agent.name} - Dashboard</h2>
@@ -450,6 +455,19 @@ function App() {
           <button className="complete-all-btn" onClick={() => completeAllTasksForAgent(agent.id)} disabled={isLoading || agentAssignments.length === 0}>
             Complete All
           </button>
+          {/* Copy Product IDs button */}
+          <button
+            className="copy-ids-btn"
+            onClick={() => {
+              const ids = agentAssignments.map(a => a.productId).join(', ');
+              navigator.clipboard.writeText(ids)
+                .then(() => alert('Product IDs copied!'))
+                .catch(() => alert('Failed to copy product IDs.'));
+            }}
+            disabled={agentAssignments.length === 0}
+          >
+            Copy Product IDs
+          </button>
         </div>
         {agentAssignments.length === 0 ? (
           <p>No tasks assigned.</p>
@@ -457,7 +475,7 @@ function App() {
           <table className="assignments-table">
             <thead>
               <tr>
-                <th>Product ID</th>
+                <th className="product-id">Product ID</th>
                 <th>Count</th>
                 <th>Tenant ID</th>
                 <th>Priority</th>
@@ -471,19 +489,21 @@ function App() {
                 const product = products.find(p => p.id === assign.productId);
                 return (
                   <tr key={assign.id}>
-                    <td>{assign.productId}</td>
+                    <td className="product-id">{assign.productId}</td>
                     <td>{product?.count || 1}</td>
                     <td>{product?.tenantId || 'N/A'}</td>
                     <td>{product?.priority || 'N/A'}</td>
                     <td>{product?.createdOn || 'N/A'}</td>
                     <td>{assign.assignedOn || 'N/A'}</td>
                     <td>
-                      <button className="complete-task-btn" onClick={() => completeTask(agent.id, assign.productId)} disabled={isLoading}>
-                        Complete
-                      </button>
-                      <button className="unassign-task-btn" onClick={() => unassignProduct(assign.productId, agent.id)} disabled={isLoading}>
-                        Unassign
-                      </button>
+                      <div className="action-buttons">
+                        <button className="complete-task-btn" onClick={() => completeTask(agent.id, assign.productId)} disabled={isLoading}>
+                          Complete
+                        </button>
+                        <button className="unassign-task-btn" onClick={() => unassignProduct(assign.productId, agent.id)} disabled={isLoading}>
+                          Unassign
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -498,36 +518,43 @@ function App() {
     );
   };
 
-  // Render Completed Tasks View
+  // Render Completed Tasks View (grouped by Product ID)
   const renderCompletedTasks = () => {
     const completed = assignments.filter(a => a.completed);
+    // Group by productId
+    const grouped = {};
+    completed.forEach(c => {
+      const key = c.productId;
+      if (!grouped[key]) {
+        grouped[key] = { count: 0, agentNames: new Set() };
+      }
+      grouped[key].count += 1;
+      const agent = agents.find(a => a.id === c.agentId);
+      grouped[key].agentNames.add(agent ? agent.name : 'Unknown');
+    });
     return (
       <div className="view-section">
         <h2>Completed Tasks</h2>
         <button className="download-completed-btn" onClick={downloadCompletedCSV}>
           Download Completed CSV
         </button>
-        {completed.length === 0 ? (
+        {Object.keys(grouped).length === 0 ? (
           <p>No completed tasks found.</p>
         ) : (
           <table className="assignments-table">
             <thead>
               <tr>
-                <th>Assignment ID</th>
-                <th>Agent ID</th>
-                <th>Product ID</th>
-                <th>Assigned On</th>
-                <th>Completed On</th>
+                <th className="product-id">Product ID</th>
+                <th>Completed By</th>
+                <th>Task Count</th>
               </tr>
             </thead>
             <tbody>
-              {completed.map(c => (
-                <tr key={c.id}>
-                  <td>{c.id}</td>
-                  <td>{c.agentId}</td>
-                  <td>{c.productId}</td>
-                  <td>{c.assignedOn || 'N/A'}</td>
-                  <td>{c.completedOn || 'N/A'}</td>
+              {Object.entries(grouped).map(([prodId, data]) => (
+                <tr key={prodId}>
+                  <td className="product-id">{prodId}</td>
+                  <td>{Array.from(data.agentNames).join(', ')}</td>
+                  <td>{data.count}</td>
                 </tr>
               ))}
             </tbody>
@@ -555,7 +582,7 @@ function App() {
           <table className="assignments-table">
             <thead>
               <tr>
-                <th>Abstract ID</th>
+                <th className="product-id">Abstract ID</th>
                 <th>Count</th>
                 <th>Tenant ID</th>
                 <th>Priority</th>
@@ -563,9 +590,9 @@ function App() {
               </tr>
             </thead>
             <tbody>
-              {unassigned.map(p => (
+              {unassigned.map((p) => (
                 <tr key={p.id}>
-                  <td>{p.id}</td>
+                  <td className="product-id">{p.id}</td>
                   <td>{p.count || 1}</td>
                   <td>{p.tenantId || 'N/A'}</td>
                   <td>{p.priority || 'N/A'}</td>
@@ -582,7 +609,7 @@ function App() {
     );
   };
 
-  // Render Unassigned Tasks View (Previously Assigned)
+  // Render Unassigned Tasks View
   const renderPreviouslyAssigned = () => {
     return (
       <div className="view-section">
@@ -593,7 +620,7 @@ function App() {
           <table className="assignments-table">
             <thead>
               <tr>
-                <th>Abstract ID</th>
+                <th className="product-id">Abstract ID</th>
                 <th>Count</th>
                 <th>Tenant ID</th>
                 <th>Priority</th>
@@ -603,9 +630,9 @@ function App() {
               </tr>
             </thead>
             <tbody>
-              {previouslyAssigned.map(p => (
+              {previouslyAssigned.map((p) => (
                 <tr key={p.id}>
-                  <td>{p.id}</td>
+                  <td className="product-id">{p.id}</td>
                   <td>{p.count || 1}</td>
                   <td>{p.tenantId || 'N/A'}</td>
                   <td>{p.priority || 'N/A'}</td>
@@ -624,7 +651,7 @@ function App() {
     );
   };
 
-  // Main Dashboard Switch
+  // --- Main Dashboard Switch ---
   const renderDashboard = () => {
     if (view === 'completed') return renderCompletedTasks();
     if (view === 'available') return renderAvailableProducts();

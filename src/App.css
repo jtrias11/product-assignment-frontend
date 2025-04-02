@@ -39,7 +39,6 @@ body, html, .app {
 .light-mode .app-header {
   background-color: #fff;
 }
-
 .dark-mode .app-header {
   background-color: #111;
 }
@@ -60,7 +59,7 @@ body, html, .app {
 .hamburger-btn svg {
   width: 24px;
   height: 24px;
-  fill: currentColor;
+  /* Remove fill: currentColor to use inline fill */
 }
 
 .brand-title {
@@ -75,11 +74,11 @@ body, html, .app {
   justify-content: flex-end;
 }
 
-/* Side Menu (slides from left, fully hidden by default) */
+/* Side Menu */
 .side-menu {
   position: fixed;
   top: 0;
-  left: -240px;
+  left: -240px; /* Fully hidden when closed */
   width: 240px;
   height: 100vh;
   background-color: #fff;
@@ -250,6 +249,22 @@ body, html, .app {
 .dark-mode .agents-table th,
 .dark-mode .assignments-table th {
   background-color: #222;
+}
+
+/* Make Product ID column selectable */
+.product-id {
+  user-select: text;
+}
+
+.assignments-table th:not(.product-id),
+.assignments-table td:not(.product-id) {
+  user-select: none;
+}
+
+/* Action Buttons Container for spacing */
+.action-buttons {
+  display: inline-flex;
+  gap: 12px;
 }
 
 /* View Dashboard Button */
