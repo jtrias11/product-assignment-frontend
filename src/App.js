@@ -11,8 +11,8 @@ function App() {
   // Theme & Menu state
   const [darkMode, setDarkMode] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const toggleTheme = () => setDarkMode(prev => !prev);
-  const toggleMenu = () => setMenuOpen(prev => !prev);
+  const toggleTheme = () => setDarkMode((prev) => !prev);
+  const toggleMenu = () => setMenuOpen((prev) => !prev);
 
   // Data states
   const [agents, setAgents] = useState([]);
@@ -34,7 +34,7 @@ function App() {
   const [view, setView] = useState('agents');
   const [selectedAgent, setSelectedAgent] = useState(null);
 
-  // Confirmation dialog state (if needed later)
+  // Confirmation dialog state (if needed)
   const [confirmDialog, setConfirmDialog] = useState({
     show: false,
     title: '',
@@ -104,7 +104,7 @@ function App() {
       const res = await fetch(`${API_BASE_URL}/previously-assigned`);
       if (!res.ok) throw new Error('Failed to load unassigned tasks');
       const data = await res.json();
-      // Filter out any tasks that are actually completed
+      // Only include tasks that are truly unassigned (filter out completed ones)
       const filtered = data.filter(task => task.unassignedTime);
       setPreviouslyAssigned(filtered);
     } catch (error) {
@@ -408,25 +408,21 @@ function App() {
             </tr>
           </thead>
           <tbody>
-            {agents
-              .filter((agent) =>
-                agent.name.toLowerCase().includes(searchTerm.toLowerCase())
-              )
-              .map((agent) => {
-                const workloadCount = getAgentWorkloadCount(agent.id);
-                return (
-                  <tr key={agent.id}>
-                    <td>{agent.name}</td>
-                    <td>{agent.role}</td>
-                    <td>{workloadCount}/30</td>
-                    <td>
-                      <button className="view-dashboard-btn" onClick={() => { setSelectedAgent(agent.id); setView('agent-dashboard'); }}>
-                        View Dashboard
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
+            {agents.filter(agent => agent.name.toLowerCase().includes(searchTerm.toLowerCase())).map((agent) => {
+              const workloadCount = getAgentWorkloadCount(agent.id);
+              return (
+                <tr key={agent.id}>
+                  <td>{agent.name}</td>
+                  <td>{agent.role}</td>
+                  <td>{workloadCount}/30</td>
+                  <td>
+                    <button className="view-dashboard-btn" onClick={() => { setSelectedAgent(agent.id); setView('agent-dashboard'); }}>
+                      View Dashboard
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       )}
@@ -435,12 +431,10 @@ function App() {
 
   // Render Agent Dashboard View
   const renderAgentDashboard = () => {
-    const agent = agents.find((a) => a.id === selectedAgent);
+    const agent = agents.find(a => a.id === selectedAgent);
     if (!agent) return <p>Agent not found.</p>;
-    const agentAssignments = assignments.filter(
-      (a) => a.agentId === agent.id && !a.completed && !a.unassignedTime
-    );
-    // For copy functionality, the Product ID column already has class "product-id"
+    const agentAssignments = assignments.filter(a => a.agentId === agent.id && !a.completed && !a.unassignedTime);
+    // Functionality to copy product IDs is already provided in another button if needed.
     return (
       <div className="view-section">
         <h2>{agent.name} - Dashboard</h2>
@@ -455,7 +449,6 @@ function App() {
           <button className="complete-all-btn" onClick={() => completeAllTasksForAgent(agent.id)} disabled={isLoading || agentAssignments.length === 0}>
             Complete All
           </button>
-          {/* Copy Product IDs button */}
           <button
             className="copy-ids-btn"
             onClick={() => {
@@ -518,17 +511,28 @@ function App() {
     );
   };
 
-  // Render Completed Tasks View (grouped by Product ID)
+  // Render Completed Tasks View (group by Product ID)
   const renderCompletedTasks = () => {
     const completed = assignments.filter(a => a.completed);
-    // Group by productId
+    // Group completed tasks by product ID and sum counts
     const grouped = {};
     completed.forEach(c => {
       const key = c.productId;
       if (!grouped[key]) {
-        grouped[key] = { count: 0, agentNames: new Set() };
+        const product = products.find(p => p.id === key);
+        grouped[key] = {
+          count: product && product.count ? parseInt(product.count, 10) : 1,
+          createdOn: product?.createdOn || 'N/A',
+          priority: product?.priority || 'N/A',
+          tenantId: product?.tenantId || 'N/A',
+          completedTime: c.completedOn || 'N/A',
+          agentNames: new Set(),
+        };
+      } else {
+        const product = products.find(p => p.id === key);
+        const additional = product && product.count ? parseInt(product.count, 10) : 1;
+        grouped[key].count += additional;
       }
-      grouped[key].count += 1;
       const agent = agents.find(a => a.id === c.agentId);
       grouped[key].agentNames.add(agent ? agent.name : 'Unknown');
     });
@@ -547,6 +551,10 @@ function App() {
                 <th className="product-id">Product ID</th>
                 <th>Completed By</th>
                 <th>Task Count</th>
+                <th>Tenant ID</th>
+                <th>Priority</th>
+                <th>Created On</th>
+                <th>Completed Time</th>
               </tr>
             </thead>
             <tbody>
@@ -555,6 +563,10 @@ function App() {
                   <td className="product-id">{prodId}</td>
                   <td>{Array.from(data.agentNames).join(', ')}</td>
                   <td>{data.count}</td>
+                  <td>{data.tenantId}</td>
+                  <td>{data.priority}</td>
+                  <td>{data.createdOn}</td>
+                  <td>{data.completedTime}</td>
                 </tr>
               ))}
             </tbody>
@@ -567,15 +579,12 @@ function App() {
     );
   };
 
-  // Render Available Products View
+  // Render Available Products View (without CSV download button)
   const renderAvailableProducts = () => {
     const unassigned = products.filter(p => !p.assigned);
     return (
       <div className="view-section">
         <h2>Available Products</h2>
-        <button className="download-completed-btn" onClick={downloadUnassignedCSV}>
-          Download Unassigned CSV
-        </button>
         {unassigned.length === 0 ? (
           <p>No available products found.</p>
         ) : (
@@ -614,6 +623,9 @@ function App() {
     return (
       <div className="view-section">
         <h2>Unassigned Tasks</h2>
+        <button className="download-completed-btn" onClick={downloadUnassignedCSV}>
+          Download Unassigned CSV
+        </button>
         {previouslyAssigned.length === 0 ? (
           <p>No unassigned tasks found.</p>
         ) : (
