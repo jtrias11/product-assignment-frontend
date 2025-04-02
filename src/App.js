@@ -3,14 +3,17 @@ import './App.css';
 
 const getApiBaseUrl = () => {
   const baseUrl = process.env.REACT_APP_API_BASE_URL || 'https://product-assignment-server.onrender.com/api';
-  console.log('API Base URL:', baseUrl);
   return baseUrl;
 };
 
 const API_BASE_URL = getApiBaseUrl();
 
 function App() {
-  // State management
+  // Light/Dark mode state
+  const [darkMode, setDarkMode] = useState(false);
+  const toggleTheme = () => setDarkMode(!darkMode);
+
+  // Other state variables
   const [agents, setAgents] = useState([]);
   const [products, setProducts] = useState([]);
   const [assignments, setAssignments] = useState([]);
@@ -42,14 +45,12 @@ function App() {
       const productsData = await productsRes.json();
       const agentsData = await agentsRes.json();
       const assignmentsData = await assignmentsRes.json();
-      console.log("Products loaded:", productsData.length);
       setProducts(productsData);
       setAgents(agentsData);
       setAssignments(assignmentsData);
       setMessage('Data loaded successfully');
       setIsLoading(false);
     } catch (error) {
-      console.error('Error loading data:', error);
       setMessage(`Error loading data: ${error.message}`);
       setIsLoading(false);
     }
@@ -59,7 +60,7 @@ function App() {
     loadDataFromServer();
   }, [loadDataFromServer]);
 
-  // File upload handler using icon (uploadSuccess removed)
+  // File upload using data upload icon
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -82,7 +83,6 @@ function App() {
       setMessage(result.message);
       await loadDataFromServer();
     } catch (error) {
-      console.error('Error uploading file:', error);
       setMessage(`Error uploading file: ${error.message}`);
     } finally {
       setIsLoading(false);
@@ -101,7 +101,6 @@ function App() {
       await loadDataFromServer();
       setMessage('Data refreshed successfully');
     } catch (error) {
-      console.error('Error refreshing data:', error);
       setMessage(`Error refreshing data: ${error.message}`);
     } finally {
       setIsLoading(false);
@@ -122,7 +121,6 @@ function App() {
       await loadDataFromServer();
       setMessage(result.message);
     } catch (error) {
-      console.error('Error requesting task:', error);
       setMessage(`Error requesting task: ${error.message}`);
     } finally {
       setIsLoading(false);
@@ -143,7 +141,6 @@ function App() {
       await loadDataFromServer();
       setMessage(result.message);
     } catch (error) {
-      console.error('Error completing task:', error);
       setMessage(`Error completing task: ${error.message}`);
     } finally {
       setIsLoading(false);
@@ -164,7 +161,6 @@ function App() {
       await loadDataFromServer();
       setMessage(result.message);
     } catch (error) {
-      console.error('Error completing all tasks for agent:', error);
       setMessage(`Error: ${error.message}`);
     } finally {
       setIsLoading(false);
@@ -185,7 +181,6 @@ function App() {
       await loadDataFromServer();
       setMessage(result.message);
     } catch (error) {
-      console.error('Error unassigning product:', error);
       setMessage(`Error unassigning product: ${error.message}`);
     } finally {
       setIsLoading(false);
@@ -207,7 +202,6 @@ function App() {
       await loadDataFromServer();
       setMessage(result.message);
     } catch (error) {
-      console.error('Error unassigning agent tasks:', error);
       setMessage(`Error unassigning agent tasks: ${error.message}`);
     } finally {
       setIsLoading(false);
@@ -228,7 +222,6 @@ function App() {
       await loadDataFromServer();
       setMessage(result.message);
     } catch (error) {
-      console.error('Error unassigning all tasks:', error);
       setMessage(`Error unassigning all tasks: ${error.message}`);
     } finally {
       setIsLoading(false);
@@ -246,7 +239,6 @@ function App() {
       setCompletedTasks(data);
       setIsLoading(false);
     } catch (error) {
-      console.error('Error loading completed tasks:', error);
       setMessage(`Error loading completed tasks: ${error.message}`);
       setIsLoading(false);
     }
@@ -262,7 +254,6 @@ function App() {
       setUnassignedProducts(data);
       setIsLoading(false);
     } catch (error) {
-      console.error('Error loading available products:', error);
       setMessage(`Error loading available products: ${error.message}`);
       setIsLoading(false);
     }
@@ -278,7 +269,6 @@ function App() {
       setPreviouslyAssigned(data);
       setIsLoading(false);
     } catch (error) {
-      console.error('Error loading unassigned tasks:', error);
       setMessage(`Error loading unassigned tasks: ${error.message}`);
       setIsLoading(false);
     }
@@ -294,7 +284,6 @@ function App() {
       setQueueProducts(data);
       setIsLoading(false);
     } catch (error) {
-      console.error('Error loading product queue:', error);
       setMessage(`Error loading product queue: ${error.message}`);
       setIsLoading(false);
     }
@@ -356,7 +345,7 @@ function App() {
     );
   };
 
-  // Render header with upload icon on left and navigation on right.
+  // Render header with upload icon and nav plus theme toggle.
   const renderHeader = () => (
     <header className="app-header">
       <div className="header-left">
@@ -383,6 +372,9 @@ function App() {
           <button onClick={() => handleViewChange('unassigned')} disabled={isLoading}>Unassigned Tasks</button>
           <button onClick={() => handleViewChange('queue')} disabled={isLoading}>Queue</button>
         </nav>
+        <button onClick={toggleTheme} className="theme-toggle-button">
+          {darkMode ? 'Light Mode' : 'Dark Mode'}
+        </button>
       </div>
       {message && <div className="message">{message}</div>}
     </header>
@@ -767,7 +759,7 @@ function App() {
   };
 
   return (
-    <div className="app">
+    <div className={`app ${darkMode ? 'dark-mode' : 'light-mode'}`}>
       {renderHeader()}
       <main className="app-content">
         {isLoading && (
