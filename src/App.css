@@ -1,27 +1,29 @@
-/* Base Light vs Dark Mode */
+/* Base Styles */
+body, html, .app {
+  margin: 0;
+  padding: 0;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+}
+
+/* Light Mode */
 .light-mode {
   background-color: #fff;
   color: #000;
 }
 
+/* Dark Mode */
 .dark-mode {
   background-color: #000;
   color: #fff;
-}
-
-/* Root container */
-.app {
-  min-height: 100vh;
-  position: relative;
 }
 
 /* Header */
 .app-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   padding: 12px 20px;
   position: relative;
-  justify-content: space-between;
 }
 
 .light-mode .app-header {
@@ -35,12 +37,11 @@
   color: #fff;
 }
 
-/* Left side (hamburger) */
+/* Hamburger Button */
 .hamburger-btn {
   background: none;
   border: none;
   cursor: pointer;
-  display: flex;
   padding: 4px;
 }
 
@@ -49,23 +50,11 @@
   height: 24px;
 }
 
-/* Center or brand area */
-.header-center {
-  flex: 1;
-  text-align: center;
-}
-
-/* Right side is empty or for short messages */
-.header-right {
-  display: flex;
-  align-items: center;
-}
-
-/* The side menu */
+/* Side Menu */
 .side-menu {
   position: fixed;
   top: 0;
-  left: -240px; /* hidden by default */
+  left: -240px;
   width: 240px;
   height: 100vh;
   background-color: #fff;
@@ -76,14 +65,14 @@
   z-index: 2000;
 }
 
-.side-menu.dark-mode {
+.dark-mode .side-menu {
   background-color: #111;
   color: #fff;
   border-right: 1px solid #333;
 }
 
 .side-menu.open {
-  left: 0; /* slide in */
+  left: 0;
 }
 
 .close-menu-btn {
@@ -105,6 +94,7 @@
   padding: 8px 12px;
   border-radius: 4px;
   text-align: left;
+  cursor: pointer;
 }
 
 .side-menu-nav button:hover {
@@ -137,19 +127,142 @@
   padding: 4px;
 }
 
-/* Light/Dark override for side menu text and background, if needed */
-.dark-mode .side-menu-nav button {
-  border-color: #0d6efd;
-  color: #0d6efd;
-}
-
-/* ... (existing styles from your minimal palette code) ... */
-
-/* Center the agent directory content */
+/* Agent Directory Centering */
 .agent-list-section {
   padding: 20px;
   max-width: 900px;
   margin: 0 auto;
 }
 
-/* etc. (the rest of your existing minimalistic black/white/blue styling) */
+/* Loading Overlay */
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255,255,255,0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.spinner-large {
+  border: 8px solid #f3f3f3;
+  border-top: 8px solid #000;
+  border-radius: 50%;
+  width: 60px;
+  height: 60px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Confirm Dialog */
+.confirm-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+}
+
+.confirm-dialog {
+  background: #fff;
+  padding: 20px;
+  border-radius: 6px;
+  width: 300px;
+  text-align: center;
+  color: #000;
+}
+
+.confirm-buttons {
+  display: flex;
+  justify-content: space-around;
+  margin-top: 15px;
+}
+
+.cancel-button, .confirm-button {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+  color: #fff;
+}
+
+.cancel-button {
+  background-color: #000;
+}
+
+.confirm-button {
+  background-color: #0d6efd;
+}
+
+/* Theme Toggle Button in Side Menu */
+.theme-toggle-button {
+  width: 100%;
+  background: none;
+  border: 1px solid #0d6efd;
+  color: #0d6efd;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.theme-toggle-button:hover {
+  background-color: #0d6efd;
+  color: #fff;
+}
+
+/* Back Button */
+.back-button {
+  background: none;
+  border: 1px solid #0d6efd;
+  color: #0d6efd;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.back-button:hover {
+  background-color: #0d6efd;
+  color: #fff;
+}
+
+/* Minimalistic Table Styling */
+.assignments-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 16px;
+}
+
+.assignments-table th, .assignments-table td {
+  border: 1px solid #ddd;
+  padding: 10px;
+  font-size: 14px;
+  color: inherit;
+}
+
+.assignments-table th {
+  background-color: #f9f9f9;
+}
+
+.assigned-row {
+  background-color: #fefefe;
+}
+
+.previously-assigned-row {
+  background-color: #fafafa;
+}
