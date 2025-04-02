@@ -8,7 +8,7 @@ const getApiBaseUrl = () => {
 const API_BASE_URL = getApiBaseUrl();
 
 function App() {
-  // Theme & Menu
+  // Theme & Menu state
   const [darkMode, setDarkMode] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const toggleTheme = () => setDarkMode((prev) => !prev);
@@ -71,7 +71,6 @@ function App() {
     }
   }, []);
 
-  // Load previously assigned tasks (for "Unassigned Tasks" view)
   const loadPreviouslyAssigned = async () => {
     setIsLoading(true);
     try {
@@ -253,6 +252,7 @@ function App() {
   const downloadCompletedCSV = () => {
     window.open(`${API_BASE_URL}/download/completed-assignments`, '_blank');
   };
+
   const downloadUnassignedCSV = () => {
     window.open(`${API_BASE_URL}/download/unassigned-products`, '_blank');
   };
@@ -281,9 +281,7 @@ function App() {
           <p>{confirmDialog.message}</p>
           <div className="confirm-buttons">
             <button
-              onClick={() =>
-                setConfirmDialog({ show: false, title: '', message: '', onConfirm: null })
-              }
+              onClick={() => setConfirmDialog({ show: false, title: '', message: '', onConfirm: null })}
               className="cancel-button"
             >
               Cancel
@@ -298,42 +296,54 @@ function App() {
   };
 
   // --- Render Functions for Views ---
-  const renderQueue = () => (
-    <div className="view-section">
-      <h2>Queue</h2>
-      {products.length === 0 ? (
-        <p>No products found.</p>
-      ) : (
-        <table className="assignments-table">
-          <thead>
-            <tr>
-              <th>Abstract ID</th>
-              <th>Name</th>
-              <th>Count</th>
-              <th>Tenant ID</th>
-              <th>Priority</th>
-              <th>Created On</th>
-              <th>Assigned</th>
-            </tr>
-          </thead>
-          <tbody>
-            {products.map((p) => (
-              <tr key={p.id}>
-                <td>{p.id}</td>
-                <td>{p.name || 'N/A'}</td>
-                <td>{p.count || 1}</td>
-                <td>{p.tenantId || 'N/A'}</td>
-                <td>{p.priority || 'N/A'}</td>
-                <td>{p.createdOn || 'N/A'}</td>
-                <td>{p.assigned ? 'Yes' : 'No'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-      <button className="back-button" onClick={() => setView('agents')}>
-        Back to Directory
-      </button>
+  const renderHeader = () => (
+    <header className={`app-header ${darkMode ? 'dark-mode' : ''}`}>
+      <div className="header-left">
+        <button className="hamburger-btn" onClick={() => setMenuOpen(true)}>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill={darkMode ? '#fff' : '#000'}>
+            <path d="M3 6h18v2H3V6zm0 5h18v2H3v-2zm0 5h18v2H3v-2z" />
+          </svg>
+        </button>
+        <h1 className="brand-title">Product Assignment</h1>
+      </div>
+      <div className="header-right"></div>
+    </header>
+  );
+
+  const renderSideMenu = () => (
+    <div className={`side-menu ${menuOpen ? 'open' : ''} ${darkMode ? 'dark-mode' : 'light-mode'}`}>
+      <button className="close-menu-btn" onClick={() => setMenuOpen(false)}>✕</button>
+      <nav className="side-menu-nav">
+        <button onClick={() => handleViewChange('agents')} disabled={isLoading}>
+          Agent Directory
+        </button>
+        <button onClick={() => handleViewChange('completed')} disabled={isLoading}>
+          Completed Tasks
+        </button>
+        <button onClick={() => handleViewChange('available')} disabled={isLoading}>
+          Available Products
+        </button>
+        <button onClick={() => handleViewChange('queue')} disabled={isLoading}>
+          Queue
+        </button>
+        <button onClick={() => handleViewChange('unassigned')} disabled={isLoading}>
+          Unassigned Tasks
+        </button>
+        <hr />
+        <button onClick={toggleTheme} className="theme-toggle-button">
+          {darkMode ? 'Light Mode' : 'Dark Mode'}
+        </button>
+      </nav>
+      <hr />
+      <div className="menu-upload-section">
+        <label htmlFor="output-csv" className="upload-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill={darkMode ? '#fff' : '#0d6efd'}>
+            <path d="M5 20h14v-2H5v2zm7-18L5.33 9h3.84v4h6.66v-4h3.84L12 2z" />
+          </svg>
+          <span>Upload CSV</span>
+        </label>
+        <input type="file" id="output-csv" accept=".csv" onChange={handleFileUpload} disabled={isLoading} className="file-input" />
+      </div>
     </div>
   );
 
@@ -414,25 +424,13 @@ function App() {
         <h2>{agent.name} - Dashboard</h2>
         <p>{agent.role} • {getAgentWorkloadCount(agent.id)}/30 tasks</p>
         <div className="dashboard-actions">
-          <button
-            className="request-task-btn"
-            onClick={() => requestTask(agent.id)}
-            disabled={isLoading}
-          >
+          <button className="request-task-btn" onClick={() => requestTask(agent.id)} disabled={isLoading}>
             Request Task
           </button>
-          <button
-            className="unassign-all-btn"
-            onClick={() => unassignAgentTasks(agent.id)}
-            disabled={isLoading || agentAssignments.length === 0}
-          >
+          <button className="unassign-all-btn" onClick={() => unassignAgentTasks(agent.id)} disabled={isLoading || agentAssignments.length === 0}>
             Unassign Tasks
           </button>
-          <button
-            className="complete-all-btn"
-            onClick={() => completeAllTasksForAgent(agent.id)}
-            disabled={isLoading || agentAssignments.length === 0}
-          >
+          <button className="complete-all-btn" onClick={() => completeAllTasksForAgent(agent.id)} disabled={isLoading || agentAssignments.length === 0}>
             Complete All
           </button>
         </div>
@@ -463,18 +461,10 @@ function App() {
                     <td>{product?.createdOn || 'N/A'}</td>
                     <td>{assign.assignedOn || 'N/A'}</td>
                     <td>
-                      <button
-                        className="complete-task-btn"
-                        onClick={() => completeTask(agent.id, assign.productId)}
-                        disabled={isLoading}
-                      >
+                      <button className="complete-task-btn" onClick={() => completeTask(agent.id, assign.productId)} disabled={isLoading}>
                         Complete
                       </button>
-                      <button
-                        className="unassign-task-btn"
-                        onClick={() => unassignProduct(assign.productId, agent.id)}
-                        disabled={isLoading}
-                      >
+                      <button className="unassign-task-btn" onClick={() => unassignProduct(assign.productId, agent.id)} disabled={isLoading}>
                         Unassign
                       </button>
                     </td>
@@ -484,13 +474,7 @@ function App() {
             </tbody>
           </table>
         )}
-        <button
-          className="back-button"
-          onClick={() => {
-            setSelectedAgent(null);
-            setView('agents');
-          }}
-        >
+        <button className="back-button" onClick={() => { setSelectedAgent(null); setView('agents'); }}>
           Back to Directory
         </button>
       </div>
@@ -620,7 +604,7 @@ function App() {
     );
   };
 
-  // Main dashboard switch
+  // --- Main Dashboard Switch ---
   const renderDashboard = () => {
     if (view === 'completed') return renderCompletedTasks();
     if (view === 'available') return renderAvailableProducts();
