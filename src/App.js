@@ -19,14 +19,13 @@ function App() {
   const [loadingMessage, setLoadingMessage] = useState('Loading data...');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedAgent, setSelectedAgent] = useState(null);
-  // Available views: agents, completed, available, unassigned, queue
+  // Views: agents, completed, available, unassigned, queue
   const [view, setView] = useState('agents');
   const [completedTasks, setCompletedTasks] = useState([]);
   const [unassignedProducts, setUnassignedProducts] = useState([]);
   const [previouslyAssigned, setPreviouslyAssigned] = useState([]);
   const [queueProducts, setQueueProducts] = useState([]);
   const [confirmDialog, setConfirmDialog] = useState({ show: false, title: '', message: '', onConfirm: null });
-  const [uploadSuccess, setUploadSuccess] = useState(false);
 
   const loadDataFromServer = useCallback(async () => {
     setIsLoading(true);
@@ -60,12 +59,11 @@ function App() {
     loadDataFromServer();
   }, [loadDataFromServer]);
 
-  // File upload handler – using an icon instead of text.
+  // File upload handler using icon (uploadSuccess removed)
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
     event.target.value = null;
-    setUploadSuccess(false);
     setIsLoading(true);
     setLoadingMessage('Uploading CSV file and adding new products...');
     const formData = new FormData();
@@ -82,7 +80,6 @@ function App() {
       }
       const result = await response.json();
       setMessage(result.message);
-      setUploadSuccess(true);
       await loadDataFromServer();
     } catch (error) {
       console.error('Error uploading file:', error);
