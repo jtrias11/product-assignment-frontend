@@ -1,6 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import './App.css';
 
+// Helper function to format a date string to EST
+const formatEST = (dateStr) => {
+  if (!dateStr) return 'N/A';
+  return new Date(dateStr).toLocaleString('en-US', { timeZone: 'America/New_York' });
+};
+
 const getApiBaseUrl = () => {
   return process.env.REACT_APP_API_BASE_URL || 'https://product-assignment-server.onrender.com/api';
 };
@@ -11,8 +17,8 @@ function App() {
   // Theme & Menu state
   const [darkMode, setDarkMode] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const toggleTheme = () => setDarkMode((prev) => !prev);
-  const toggleMenu = () => setMenuOpen((prev) => !prev);
+  const toggleTheme = () => setDarkMode(prev => !prev);
+  const toggleMenu = () => setMenuOpen(prev => !prev);
 
   // Data states
   const [agents, setAgents] = useState([]);
@@ -34,7 +40,7 @@ function App() {
   const [view, setView] = useState('agents');
   const [selectedAgent, setSelectedAgent] = useState(null);
 
-  // Confirmation dialog state (if needed)
+  // Confirmation dialog state (if needed later)
   const [confirmDialog, setConfirmDialog] = useState({
     show: false,
     title: '',
@@ -104,7 +110,7 @@ function App() {
       const res = await fetch(`${API_BASE_URL}/previously-assigned`);
       if (!res.ok) throw new Error('Failed to load unassigned tasks');
       const data = await res.json();
-      // Only include tasks that are truly unassigned (filter out completed ones)
+      // Filter tasks that have unassignedTime (i.e. manually unassigned tasks)
       const filtered = data.filter(task => task.unassignedTime);
       setPreviouslyAssigned(filtered);
     } catch (error) {
@@ -286,7 +292,7 @@ function App() {
   const renderHeader = () => (
     <header className={`app-header ${darkMode ? 'dark-mode' : 'light-mode'}`}>
       <div className="header-left">
-        <button className="hamburger-btn" onClick={toggleMenu}>
+        <button className="hamburger-btn" onClick={toggleMenu} style={{ marginLeft: '10px' }}>
           <svg width="24" height="24" viewBox="0 0 24 24" fill={darkMode ? '#fff' : '#000'}>
             <path d="M3 6h18v2H3V6zm0 5h18v2H3v-2zm0 5h18v2H3v-2z" />
           </svg>
@@ -364,7 +370,7 @@ function App() {
                 <td>{p.count || 1}</td>
                 <td>{p.tenantId || 'N/A'}</td>
                 <td>{p.priority || 'N/A'}</td>
-                <td>{p.createdOn || 'N/A'}</td>
+                <td>{formatEST(p.createdOn)}</td>
                 <td>{p.assigned ? 'Yes' : 'No'}</td>
               </tr>
             ))}
@@ -391,9 +397,7 @@ function App() {
       </div>
       <div className="search-box">
         <input type="text" placeholder="Search agents..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-        <button onClick={handleRefreshData} className="refresh-button">
-          Refresh
-        </button>
+        <button onClick={handleRefreshData} className="refresh-button">Refresh</button>
       </div>
       {agents.length === 0 ? (
         <p>No agents found.</p>
@@ -434,7 +438,6 @@ function App() {
     const agent = agents.find(a => a.id === selectedAgent);
     if (!agent) return <p>Agent not found.</p>;
     const agentAssignments = assignments.filter(a => a.agentId === agent.id && !a.completed && !a.unassignedTime);
-    // Functionality to copy product IDs is already provided in another button if needed.
     return (
       <div className="view-section">
         <h2>{agent.name} - Dashboard</h2>
@@ -486,8 +489,8 @@ function App() {
                     <td>{product?.count || 1}</td>
                     <td>{product?.tenantId || 'N/A'}</td>
                     <td>{product?.priority || 'N/A'}</td>
-                    <td>{product?.createdOn || 'N/A'}</td>
-                    <td>{assign.assignedOn || 'N/A'}</td>
+                    <td>{formatEST(product?.createdOn)}</td>
+                    <td>{formatEST(assign.assignedOn)}</td>
                     <td>
                       <div className="action-buttons">
                         <button className="complete-task-btn" onClick={() => completeTask(agent.id, assign.productId)} disabled={isLoading}>
@@ -511,10 +514,10 @@ function App() {
     );
   };
 
-  // Render Completed Tasks View (group by Product ID)
+  // Render Completed Tasks View (grouped by Product ID)
   const renderCompletedTasks = () => {
     const completed = assignments.filter(a => a.completed);
-    // Group completed tasks by product ID and sum counts
+    // Group completed tasks by productId
     const grouped = {};
     completed.forEach(c => {
       const key = c.productId;
@@ -525,7 +528,7 @@ function App() {
           createdOn: product?.createdOn || 'N/A',
           priority: product?.priority || 'N/A',
           tenantId: product?.tenantId || 'N/A',
-          completedTime: c.completedOn || 'N/A',
+          completedTime: c.completedOn,
           agentNames: new Set(),
         };
       } else {
@@ -554,7 +557,7 @@ function App() {
                 <th>Tenant ID</th>
                 <th>Priority</th>
                 <th>Created On</th>
-                <th>Completed Time</th>
+                <th>Completed Time (EST)</th>
               </tr>
             </thead>
             <tbody>
@@ -565,8 +568,8 @@ function App() {
                   <td>{data.count}</td>
                   <td>{data.tenantId}</td>
                   <td>{data.priority}</td>
-                  <td>{data.createdOn}</td>
-                  <td>{data.completedTime}</td>
+                  <td>{formatEST(data.createdOn)}</td>
+                  <td>{formatEST(data.completedTime)}</td>
                 </tr>
               ))}
             </tbody>
@@ -605,7 +608,7 @@ function App() {
                   <td>{p.count || 1}</td>
                   <td>{p.tenantId || 'N/A'}</td>
                   <td>{p.priority || 'N/A'}</td>
-                  <td>{p.createdOn || 'N/A'}</td>
+                  <td>{formatEST(p.createdOn)}</td>
                 </tr>
               ))}
             </tbody>
@@ -648,8 +651,8 @@ function App() {
                   <td>{p.count || 1}</td>
                   <td>{p.tenantId || 'N/A'}</td>
                   <td>{p.priority || 'N/A'}</td>
-                  <td>{p.createdOn || 'N/A'}</td>
-                  <td>{p.unassignedTime || 'N/A'}</td>
+                  <td>{formatEST(p.createdOn)}</td>
+                  <td>{formatEST(p.unassignedTime)}</td>
                   <td>{p.unassignedBy || 'N/A'}</td>
                 </tr>
               ))}
