@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import './App.css';
 
-// Helper function to format a date string to EST (US Eastern Time)
+// Helper function to format a date string to EST
 const formatEST = (dateStr) => {
   if (!dateStr) return 'N/A';
   return new Date(dateStr).toLocaleString('en-US', { timeZone: 'America/New_York' });
@@ -17,15 +17,15 @@ function App() {
   // Theme & Menu state
   const [darkMode, setDarkMode] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const toggleTheme = () => setDarkMode(prev => !prev);
-  const toggleMenu = () => setMenuOpen(prev => !prev);
+  const toggleTheme = () => setDarkMode((prev) => !prev);
+  const toggleMenu = () => setMenuOpen((prev) => !prev);
 
   // Data states
   const [agents, setAgents] = useState([]);
   const [products, setProducts] = useState([]);
   const [assignments, setAssignments] = useState([]);
   const [previouslyAssigned, setPreviouslyAssigned] = useState([]);
-  
+
   // System status
   const [totalAgents, setTotalAgents] = useState(0);
   const [totalProducts, setTotalProducts] = useState(0);
@@ -58,9 +58,7 @@ function App() {
           <p>{confirmDialog.message}</p>
           <div className="confirm-buttons">
             <button
-              onClick={() =>
-                setConfirmDialog({ show: false, title: '', message: '', onConfirm: null })
-              }
+              onClick={() => setConfirmDialog({ show: false, title: '', message: '', onConfirm: null })}
               className="cancel-button"
             >
               Cancel
@@ -110,7 +108,7 @@ function App() {
       const res = await fetch(`${API_BASE_URL}/previously-assigned`);
       if (!res.ok) throw new Error('Failed to load unassigned tasks');
       const data = await res.json();
-      // Filter tasks that have an unassignedTime (manually unassigned tasks)
+      // Filter out tasks that don't have an unassignedTime (i.e. not manually unassigned)
       const filtered = data.filter(task => task.unassignedTime);
       setPreviouslyAssigned(filtered);
     } catch (error) {
@@ -182,18 +180,18 @@ function App() {
     return sum;
   };
 
-  // --- Updated Request Task Function with SLA Logic ---
+  // --- Updated Request Task with SLA Logic ---
   const requestTask = async (agentId) => {
+    // Get available products (not yet assigned)
     const availableProducts = products.filter(p => !p.assigned);
     if (availableProducts.length === 0) {
       alert("No available products.");
       return;
     }
-    // For each product, set SLA based on priority.
-    // Assume priority field is "P1", "P2", "P3".
     const now = new Date();
+    // For each available product, determine its SLA in milliseconds based on priority
     const productsWithSlaDiff = availableProducts.map(p => {
-      let slaHours = 24; // default
+      let slaHours = 24; // default SLA
       if (p.priority === 'P1') {
         slaHours = 2;
       } else if (p.priority === 'P2') {
@@ -204,11 +202,12 @@ function App() {
       const slaMs = slaHours * 60 * 60 * 1000;
       const created = new Date(p.createdOn);
       const timePassed = now - created;
-      const diff = slaMs - timePassed; // positive: remaining time; negative: overdue
+      // diff > 0 means remaining time, diff < 0 means overdue.
+      const diff = slaMs - timePassed;
       return { ...p, slaDiff: diff };
     });
-    // If any products are within SLA (diff > 0), choose the one with smallest positive diff.
-    // Otherwise, choose the one with largest negative diff (i.e., most overdue).
+    // If any products are within SLA (diff > 0), select the one with the smallest positive diff.
+    // If all are overdue (diff <= 0), select the one that is most overdue (largest negative diff).
     const withinSla = productsWithSlaDiff.filter(p => p.slaDiff > 0);
     let selectedProduct;
     if (withinSla.length > 0) {
@@ -321,7 +320,6 @@ function App() {
 
   // --- Render Functions for Views ---
 
-  // Render Header
   const renderHeader = () => (
     <header className={`app-header ${darkMode ? 'dark-mode' : 'light-mode'}`}>
       <div className="header-left">
@@ -336,7 +334,6 @@ function App() {
     </header>
   );
 
-  // Render Side Menu
   const renderSideMenu = () => (
     <div className={`side-menu ${menuOpen ? 'open' : ''} ${darkMode ? 'dark-mode' : 'light-mode'}`}>
       <button className="close-menu-btn" onClick={() => setMenuOpen(false)}>
@@ -376,7 +373,6 @@ function App() {
     </div>
   );
 
-  // Render Queue View
   const renderQueue = () => (
     <div className="view-section">
       <h2>Queue</h2>
@@ -416,7 +412,6 @@ function App() {
     </div>
   );
 
-  // Render Agent Directory View
   const renderAgentDirectory = () => (
     <div className="agent-list-section">
       <h2>Agent Directory</h2>
@@ -430,9 +425,7 @@ function App() {
       </div>
       <div className="search-box">
         <input type="text" placeholder="Search agents..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-        <button onClick={handleRefreshData} className="refresh-button">
-          Refresh
-        </button>
+        <button onClick={handleRefreshData} className="refresh-button">Refresh</button>
       </div>
       {agents.length === 0 ? (
         <p>No agents found.</p>
@@ -468,7 +461,6 @@ function App() {
     </div>
   );
 
-  // Render Agent Dashboard View
   const renderAgentDashboard = () => {
     const agent = agents.find(a => a.id === selectedAgent);
     if (!agent) return <p>Agent not found.</p>;
@@ -549,10 +541,10 @@ function App() {
     );
   };
 
-  // Render Completed Tasks View (grouped by Product ID)
+  // Render Completed Tasks View (grouped by Product ID and using SLA formatted dates)
   const renderCompletedTasks = () => {
     const completed = assignments.filter(a => a.completed);
-    // Group completed tasks by product ID
+    // Group completed tasks by productId
     const grouped = {};
     completed.forEach(c => {
       const key = c.productId;
