@@ -2,8 +2,8 @@
 body, html, .app {
   margin: 0;
   padding: 0;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background-color: #f9f9f9;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  background-color: #f2f2f2;
 }
 
 /* Header */
@@ -11,9 +11,9 @@ body, html, .app {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background-color: #333;
-  padding: 10px 20px;
-  color: #fff;
+  background-color: #202124;
+  padding: 12px 20px;
+  color: #e8eaed;
   position: relative;
 }
 
@@ -34,20 +34,19 @@ body, html, .app {
 }
 
 .header-right .nav-choices button {
-  background: linear-gradient(45deg, #5c6bc0, #3949ab);
-  border: none;
-  color: #fff;
-  margin-left: 15px;
+  background: none;
+  border: 1px solid transparent;
+  color: #e8eaed;
+  margin-left: 12px;
   font-size: 14px;
   padding: 8px 12px;
-  border-radius: 4px;
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: background-color 0.3s, border-color 0.3s;
 }
 
 .header-right .nav-choices button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0px 4px 6px rgba(0,0,0,0.2);
+  background-color: #3c4043;
+  border-color: #5f6368;
 }
 
 .header-right .nav-choices button:disabled {
@@ -57,7 +56,7 @@ body, html, .app {
 /* Message */
 .message {
   margin-top: 8px;
-  padding: 5px 10px;
+  padding: 6px 10px;
   background-color: #fff3cd;
   color: #856404;
   border: 1px solid #ffeeba;
@@ -73,22 +72,22 @@ body, html, .app {
   display: flex;
   justify-content: center;
   flex-wrap: wrap;
-  margin-bottom: 20px;
   gap: 15px;
+  margin-bottom: 20px;
 }
 
 .status-card {
-  background-color: #fff;
-  padding: 15px;
+  background-color: #ffffff;
+  padding: 16px;
   border-radius: 6px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  width: 280px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  width: 260px;
   text-align: center;
 }
 
 .status-item {
-  margin: 5px 0;
-  font-size: 16px;
+  margin: 6px 0;
+  font-size: 15px;
 }
 
 /* Agent List */
@@ -100,7 +99,7 @@ body, html, .app {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
 .search-box input {
@@ -111,7 +110,7 @@ body, html, .app {
 
 /* Button Groups & Actions */
 .button-group {
-  margin-top: 15px;
+  margin-top: 16px;
 }
 
 .agent-actions .action-row {
@@ -125,58 +124,60 @@ body, html, .app {
   flex: 1;
   padding: 10px;
   border: none;
-  font-weight: bold;
+  font-weight: 600;
   cursor: pointer;
   border-radius: 4px;
   color: #fff;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: background-color 0.3s, transform 0.2s;
 }
 
 .unassign-task-button.action-btn {
-  background: linear-gradient(45deg, #ef5350, #e53935);
+  background: linear-gradient(45deg, #d32f2f, #c62828);
 }
 
 .unassign-task-button.action-btn:hover {
+  background: linear-gradient(45deg, #c62828, #b71c1c);
   transform: translateY(-2px);
-  box-shadow: 0px 4px 6px rgba(0,0,0,0.2);
 }
 
 .complete-all-button.action-btn {
-  background: linear-gradient(45deg, #5c6bc0, #3949ab);
+  background: linear-gradient(45deg, #3949ab, #303f9f);
 }
 
 .complete-all-button.action-btn:hover {
+  background: linear-gradient(45deg, #303f9f, #283593);
   transform: translateY(-2px);
-  box-shadow: 0px 4px 6px rgba(0,0,0,0.2);
 }
 
-/* Request and View Buttons */
-.request-button.action-btn, .view-button.action-btn, .unassign-button.action-btn {
-  background: linear-gradient(45deg, #66bb6a, #43a047);
+.request-button.action-btn,
+.view-button.action-btn,
+.unassign-button.action-btn {
+  background: linear-gradient(45deg, #43a047, #388e3c);
   padding: 10px 15px;
   border-radius: 4px;
 }
 
-.request-button.action-btn:hover, .view-button.action-btn:hover, .unassign-button.action-btn:hover {
+.request-button.action-btn:hover,
+.view-button.action-btn:hover,
+.unassign-button.action-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0px 4px 6px rgba(0,0,0,0.2);
 }
 
 /* Table Styling */
 .assignments-table {
   width: 100%;
   border-collapse: collapse;
-  margin-top: 15px;
+  margin-top: 16px;
 }
 
 .assignments-table th, .assignments-table td {
   border: 1px solid #ddd;
-  padding: 8px;
+  padding: 10px;
   font-size: 14px;
 }
 
 .assignments-table th {
-  background-color: #f5f5f5;
+  background-color: #e0e0e0;
 }
 
 .assigned-row {
@@ -246,7 +247,7 @@ body, html, .app {
   padding: 8px 12px;
   border: none;
   border-radius: 4px;
-  font-weight: bold;
+  font-weight: 600;
   cursor: pointer;
 }
 

@@ -10,7 +10,7 @@ const getApiBaseUrl = () => {
 const API_BASE_URL = getApiBaseUrl();
 
 function App() {
-  // State for managing data
+  // State management
   const [agents, setAgents] = useState([]);
   const [products, setProducts] = useState([]);
   const [assignments, setAssignments] = useState([]);
@@ -19,7 +19,7 @@ function App() {
   const [loadingMessage, setLoadingMessage] = useState('Loading data...');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedAgent, setSelectedAgent] = useState(null);
-  // views: agents, completed, available, unassigned, queue
+  // Available views: agents, completed, available, unassigned, queue
   const [view, setView] = useState('agents');
   const [completedTasks, setCompletedTasks] = useState([]);
   const [unassignedProducts, setUnassignedProducts] = useState([]);
@@ -60,7 +60,7 @@ function App() {
     loadDataFromServer();
   }, [loadDataFromServer]);
 
-  // File upload handler using an icon for data upload.
+  // File upload handler – using an icon instead of text.
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -359,13 +359,12 @@ function App() {
     );
   };
 
-  // Render header with a data upload icon on left and navigation on right.
+  // Render header with upload icon on left and navigation on right.
   const renderHeader = () => (
     <header className="app-header">
       <div className="header-left">
         <div className="manual-upload">
           <label htmlFor="output-csv" className="upload-icon">
-            {/* Inline SVG for data upload icon */}
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="#fff" viewBox="0 0 24 24">
               <path d="M5 20h14v-2H5v2zm7-18L5.33 9h3.84v4h6.66v-4h3.84L12 2z"/>
             </svg>
@@ -412,7 +411,7 @@ function App() {
                   "Unassign Tasks", 
                   `Are you sure you want to unassign all tasks from ${agent.name}?`,
                   () => unassignAgentTasks(agent.id)
-                )} 
+                )}
                 disabled={isLoading}
               >
                 Unassign Tasks
@@ -462,7 +461,7 @@ function App() {
                           "Unassign Task", 
                           `Are you sure you want to unassign Abstract ID ${task.productId}?`,
                           () => unassignProduct(task.productId, agent.id)
-                        )} 
+                        )}
                         disabled={isLoading}
                       >
                         Unassign
@@ -524,7 +523,7 @@ function App() {
                       "Unassign All Tasks", 
                       `Are you sure you want to unassign all tasks from ${agent.name}?`,
                       () => unassignAgentTasks(agent.id)
-                    )} 
+                    )}
                     disabled={isLoading}
                   >
                     Unassign All
@@ -756,7 +755,7 @@ function App() {
                     "Unassign All Tasks", 
                     "Are you sure you want to unassign ALL tasks from ALL agents?",
                     unassignAllTasks
-                  )} 
+                  )}
                   disabled={isLoading}
                 >
                   Unassign All Tasks
