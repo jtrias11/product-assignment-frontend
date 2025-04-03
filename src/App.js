@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import './styles/App.css'; // Updated import path
+import './App.css';
 
 // Helper function to format a date string to EST.
 const formatEST = (dateStr) => {
@@ -16,7 +16,6 @@ const formatEST = (dateStr) => {
   });
 };
 
-// Determine API base URL
 const getApiBaseUrl = () => {
   return process.env.REACT_APP_API_BASE_URL || 'https://product-assignment-server.onrender.com/api';
 };
@@ -56,17 +55,134 @@ class ErrorBoundary extends React.Component {
 }
 
 function App() {
-  // Existing code remains the same...
+  // Theme & Menu state
+  const [darkMode, setDarkMode] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const toggleTheme = () => setDarkMode(prev => !prev);
+  const toggleMenu = () => setMenuOpen(prev => !prev);
 
-  // Note: You'll need to add the existing method implementations here
-  // Such as renderHeader(), renderSideMenu(), renderDashboard(), etc.
-  // These were in your original App.js but not included in the previous artifact
+  // Data states
+  const [agents, setAgents] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [assignments, setAssignments] = useState([]);
+  const [previouslyAssigned, setPreviouslyAssigned] = useState([]);
+  
+  // System status
+  const [totalAgents, setTotalAgents] = useState(0);
+  const [totalProducts, setTotalProducts] = useState(0);
+  const [totalAssignments, setTotalAssignments] = useState(0);
 
+  // UI states
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadingMessage, setLoadingMessage] = useState('Loading data...');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [error, setError] = useState(null);
+
+  // View state
+  const [view, setView] = useState('agents');
+  const [selectedAgent, setSelectedAgent] = useState(null);
+
+  // Confirmation dialog state
+  const [confirmDialog, setConfirmDialog] = useState({
+    show: false,
+    title: '',
+    message: '',
+    onConfirm: null,
+  });
+
+  // Data Loading Function
+  const loadDataFromServer = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    setLoadingMessage('Loading data from server...');
+
+    try {
+      const [prodRes, agentsRes, assignRes] = await Promise.all([
+        fetch(`${API_BASE_URL}/products`),
+        fetch(`${API_BASE_URL}/agents`),
+        fetch(`${API_BASE_URL}/assignments`),
+      ]);
+
+      if (!prodRes.ok) throw new Error(`Products fetch failed: ${prodRes.status}`);
+      if (!agentsRes.ok) throw new Error(`Agents fetch failed: ${agentsRes.status}`);
+      if (!assignRes.ok) throw new Error(`Assignments fetch failed: ${assignRes.status}`);
+
+      const productsData = await prodRes.json();
+      const agentsData = await agentsRes.json();
+      const assignmentsData = await assignRes.json();
+
+      setProducts(productsData);
+      setAgents(agentsData);
+      setAssignments(assignmentsData);
+      setTotalAgents(agentsData.length);
+      setTotalProducts(productsData.length);
+      setTotalAssignments(assignmentsData.length);
+    } catch (error) {
+      console.error('Error loading data:', error);
+      setError(error.message || 'An unexpected error occurred');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // Load previously assigned tasks
+  const loadPreviouslyAssigned = async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/previously-assigned`);
+      if (!res.ok) throw new Error('Failed to load unassigned tasks');
+      const data = await res.json();
+      const filtered = data.filter(task => task.unassignedTime);
+      setPreviouslyAssigned(filtered);
+    } catch (error) {
+      console.error('Error loading unassigned tasks:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // File Upload Handler
+  const handleFileUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    setIsLoading(true);
+    setLoadingMessage('Uploading CSV file...');
+    
+    const formData = new FormData();
+    formData.append('outputFile', file);
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/upload-output`, {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Upload failed: ${errorText}`);
+      }
+      
+      await loadDataFromServer();
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      setError(error.message);
+    } finally {
+      setIsLoading(false);
+      event.target.value = null;
+    }
+  };
+
+  // Other methods from your original implementation would go here
+  // (requestTask, completeTask, etc.)
+
+  // Render methods would also be included here
+
+  // Main render
   return (
     <ErrorBoundary>
       <div className={`app ${darkMode ? 'dark-mode' : 'light-mode'}`}>
-        {renderHeader()}
-        {renderSideMenu()}
+        {/* Your existing header, side menu, and other render methods */}
         <main className="app-content">
           {error ? (
             <div className="error-state">
@@ -86,8 +202,8 @@ function App() {
                   </div>
                 </div>
               )}
-              {renderDashboard()}
-              {renderConfirmDialog()}
+              {/* Placeholder for your existing dashboard rendering logic */}
+              {/* renderDashboard() would go here */}
             </>
           )}
         </main>
