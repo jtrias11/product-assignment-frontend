@@ -1,309 +1,253 @@
-/***************************************************************
- * server.js - Enhanced MongoDB Integration
- * 
- * Features:
- * - Robust data loading from multiple sources
- * - Comprehensive CORS configuration
- * - Performance optimizations
- ***************************************************************/
+import React, { useState, useEffect, useCallback } from 'react';
+import './App.css';
 
-require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-const mongoose = require('mongoose');
-const path = require('path');
-const fs = require('fs').promises;
-const csvParser = require('csv-parser');
-const xlsx = require('xlsx');
-const { createReadStream } = require('fs');
-
-// Model Imports
-const Agent = require('./models/Agent');
-const Product = require('./models/Product');
-const Assignment = require('./models/Assignment');
-
-// Configuration
-const app = express();
-const PORT = process.env.PORT || 3001;
-
-// Enhanced CORS Configuration
-const corsOptions = {
-  origin: [
-    'http://localhost:3000',  // Local development
-    'https://product-assignment-frontend.onrender.com',  // Frontend deployment
-    'https://product-assignment-server.onrender.com',  // Backend deployment
-  ],
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true,
-  optionsSuccessStatus: 200
+// Utility function for date formatting
+const formatEST = (dateStr) => {
+  if (!dateStr) return 'N/A';
+  const date = new Date(dateStr.endsWith('Z') ? dateStr : dateStr + ' UTC');
+  return date.toLocaleString('en-US', { 
+    timeZone: 'America/New_York', 
+    hour12: true, 
+    year: 'numeric', 
+    month: 'numeric', 
+    day: 'numeric', 
+    hour: '2-digit', 
+    minute: '2-digit' 
+  });
 };
 
-// Middleware
-app.use(cors(corsOptions));
-app.use(express.json());
+// API Configuration
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://product-assignment-server.onrender.com/api';
 
-// File Paths
-const DATA_DIR = path.join(__dirname, 'data');
-const OUTPUT_CSV = path.join(DATA_DIR, 'output.csv');
-const ROSTER_EXCEL = path.join(DATA_DIR, 'Walmart BH Roster.xlsx');
+function App() {
+  // State Management
+  const [darkMode, setDarkMode] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [view, setView] = useState('agents');
+  
+  // Data States
+  const [agents, setAgents] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [assignments, setAssignments] = useState([]);
+  const [selectedAgent, setSelectedAgent] = useState(null);
+  
+  // UI States
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
-// Utility Functions
-async function ensureDataDir() {
-  try {
-    await fs.mkdir(DATA_DIR, { recursive: true });
-    console.log('Data directory ensured');
-    return true;
-  } catch (error) {
-    console.error('Error creating data directory:', error);
-    return false;
-  }
+  // Fetch Data Function
+  const fetchData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const [agentsRes, productsRes, assignmentsRes] = await Promise.all([
+        fetch(`${API_BASE_URL}/agents`),
+        fetch(`${API_BASE_URL}/products`),
+        fetch(`${API_BASE_URL}/assignments`)
+      ]);
+
+      if (!agentsRes.ok || !productsRes.ok || !assignmentsRes.ok) {
+        throw new Error('Failed to fetch data');
+      }
+
+      const agentsData = await agentsRes.json();
+      const productsData = await productsRes.json();
+      const assignmentsData = await assignmentsRes.json();
+
+      setAgents(agentsData);
+      setProducts(productsData);
+      setAssignments(assignmentsData);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // Load data on component mount
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  // Render Agent Dashboard View
+  const renderAgentDashboard = () => {
+    if (!selectedAgent) return <div>No agent selected</div>;
+    return (
+      <div className="view-container">
+        <h2>{selectedAgent.name}'s Dashboard</h2>
+        <p>Capacity: {selectedAgent.capacity}</p>
+        <div style={{ margin: '1rem 0' }}>
+          <button 
+            className="action-btn"
+            onClick={() => alert("Request Tasks functionality not implemented yet")}
+          >
+            Request Tasks
+          </button>
+          <button 
+            className="action-btn"
+            onClick={() => alert("Complete Tasks functionality not implemented yet")}
+          >
+            Complete Tasks
+          </button>
+          <button 
+            className="action-btn"
+            onClick={() => alert("Unassign Task functionality not implemented yet")}
+          >
+            Unassign Task
+          </button>
+        </div>
+        <div style={{ marginTop: '1rem' }}>
+          <p>Total Agents: {agents.length}</p>
+          <p>Total Products: {products.length}</p>
+        </div>
+      </div>
+    );
+  };
+
+  // Render Agents List
+  const renderAgents = () => {
+    const filteredAgents = agents.filter(agent => 
+      agent.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    return (
+      <div className="view-container">
+        <h2>Agent Directory</h2>
+        <div style={{ marginBottom: '1rem' }}>
+          <p>Total Agents: {agents.length}</p>
+          <p>Total Products: {products.length}</p>
+        </div>
+        <input 
+          type="text" 
+          placeholder="Search agents..." 
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="search-input"
+        />
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Role</th>
+              <th>Capacity</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredAgents.map(agent => (
+              <tr key={agent.id}>
+                <td>{agent.name}</td>
+                <td>{agent.role}</td>
+                <td>{agent.capacity}</td>
+                <td>
+                  <button 
+                    onClick={() => {
+                      setSelectedAgent(agent);
+                      setView('agent-dashboard');
+                    }}
+                    className="action-btn"
+                  >
+                    View Dashboard
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
+
+  // Render Completed Tasks
+  const renderCompletedTasks = () => {
+    const completedAssignments = assignments.filter(a => a.completed);
+    
+    return (
+      <div className="view-container">
+        <h2>Completed Tasks</h2>
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>Product ID</th>
+              <th>Completed On</th>
+              <th>Agent</th>
+            </tr>
+          </thead>
+          <tbody>
+            {completedAssignments.map(assignment => {
+              const agent = agents.find(a => a.id === assignment.agentId);
+              return (
+                <tr key={assignment.id}>
+                  <td>{assignment.productId}</td>
+                  <td>{formatEST(assignment.completedOn)}</td>
+                  <td>{agent ? agent.name : 'Unknown'}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
+
+  // Render Side Menu
+  const renderSideMenu = () => {
+    return (
+      <div className={`side-menu ${menuOpen ? 'open' : ''}`}>
+        <button className="close-menu" onClick={() => setMenuOpen(false)}>
+          ✕
+        </button>
+        <nav>
+          <button onClick={() => setView('agents')}>Agents</button>
+          <button onClick={() => setView('completed-tasks')}>Completed Tasks</button>
+          <button onClick={() => setView('products')}>Products</button>
+          <button onClick={() => setView('unassigned')}>Unassigned Tasks</button>
+        </nav>
+        <div className="theme-toggle">
+          <button onClick={() => setDarkMode(!darkMode)}>
+            {darkMode ? 'Light Mode' : 'Dark Mode'}
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  // Render Content Based on View
+  const renderContent = () => {
+    switch(view) {
+      case 'agents':
+        return renderAgents();
+      case 'completed-tasks':
+        return renderCompletedTasks();
+      case 'agent-dashboard':
+        return renderAgentDashboard();
+      default:
+        return <div>Select a view from the menu</div>;
+    }
+  };
+
+  return (
+    <div className={`app ${darkMode ? 'dark-mode' : 'light-mode'}`}>
+      <header>
+        <button className="hamburger-btn" onClick={() => setMenuOpen(true)}>
+          ☰
+        </button>
+        <h1>Product Assignment</h1>
+      </header>
+      
+      {renderSideMenu()}
+      
+      <main>
+        {isLoading ? (
+          <div className="loading">Loading...</div>
+        ) : error ? (
+          <div className="error">{error}</div>
+        ) : (
+          renderContent()
+        )}
+      </main>
+    </div>
+  );
 }
 
-// Read Agents from Excel
-async function readRosterExcel() {
-  try {
-    // Check if file exists
-    await fs.access(ROSTER_EXCEL);
-    
-    const workbook = xlsx.readFile(ROSTER_EXCEL);
-    const sheetName = workbook.SheetNames[0];
-    const worksheet = workbook.Sheets[sheetName];
-    const data = xlsx.utils.sheet_to_json(worksheet);
-    
-    const agents = data.map((row, index) => ({
-      id: index + 1,
-      name: row.Name || `Agent ${index + 1}`,
-      role: "Item Review",
-      capacity: 30,  // Updated capacity to 30
-      currentAssignments: []
-    }));
-    
-    console.log(`Extracted ${agents.length} agents from Excel`);
-    return agents;
-  } catch (error) {
-    console.error('Error reading Excel roster:', error);
-    return [];
-  }
-}
-
-// Read Products from CSV
-async function readOutputCsv() {
-  return new Promise((resolve) => {
-    // Check if file exists
-    fs.access(OUTPUT_CSV)
-      .then(() => {
-        const results = [];
-        
-        createReadStream(OUTPUT_CSV)
-          .pipe(csvParser())
-          .on('data', (row) => {
-            const productId = row.abstract_product_id || 
-                              row.item_abstract_product_id || 
-                              row['item.abstract_product_id'] || 
-                              row.product_id;
-            
-            if (productId) {
-              results.push({
-                id: productId,
-                name: row.product_name || '',
-                priority: row.rule_priority || row.priority || 'P3',
-                tenantId: row.tenant_id || '',
-                createdOn: row.oldest_created_on || 
-                           row.sys_created_on || 
-                           row.created_on || 
-                           new Date().toISOString(),
-                count: row.count || 1,
-                assigned: false
-              });
-            }
-          })
-          .on('end', () => {
-            console.log(`Loaded ${results.length} products from CSV`);
-            resolve(results);
-          })
-          .on('error', (error) => {
-            console.error('Error reading output CSV:', error);
-            resolve([]);
-          });
-      })
-      .catch(() => {
-        console.log('No output CSV file found');
-        resolve([]);
-      });
-  });
-}
-
-// Create Sample Agents
-function createSampleAgents() {
-  const sampleAgents = [];
-  for (let i = 1; i <= 10; i++) {
-    sampleAgents.push({
-      id: i,
-      name: `Sample Agent ${i}`,
-      role: "Item Review",
-      capacity: 30,  // Updated capacity to 30
-      currentAssignments: []
-    });
-  }
-  return sampleAgents;
-}
-
-// Create Sample Products
-function createSampleProducts() {
-  const sampleProducts = [];
-  for (let i = 1; i <= 20; i++) {
-    sampleProducts.push({
-      id: `SAMPLE${i.toString().padStart(5, '0')}`,
-      name: `Sample Product ${i}`,
-      priority: i % 3 === 0 ? 'P1' : (i % 3 === 1 ? 'P2' : 'P3'),
-      tenantId: `Sample-Tenant-${Math.floor(i/5) + 1}`,
-      createdOn: new Date(Date.now() - (i * 86400000)).toISOString(),
-      count: Math.floor(Math.random() * 5) + 1,
-      assigned: false
-    });
-  }
-  return sampleProducts;
-}
-
-// Enhanced MongoDB Connection
-const connectDB = async () => {
-  try {
-    await mongoose.connect(process.env.MONGO_URI, {
-      serverSelectionTimeoutMS: 30000,
-      socketTimeoutMS: 45000,
-      connectTimeoutMS: 45000
-    });
-    
-    console.log('MongoDB Connected Successfully');
-    
-    // Create indexes for performance
-    await Promise.all([
-      Agent.createIndexes(),
-      Product.createIndexes(),
-      Assignment.createIndexes()
-    ]);
-    
-    return true;
-  } catch (error) {
-    console.error('MongoDB Connection Error:', error);
-    return false;
-  }
-};
-
-// Comprehensive Data Loading Function
-async function loadData() {
-  await ensureDataDir();
-
-  // Load Agents
-  let agentsFromDB = await Agent.find();
-  if (agentsFromDB.length === 0) {
-    console.log('No agents in database, attempting to load from sources');
-    
-    const excelAgents = await readRosterExcel();
-    const agentsToSave = excelAgents.length > 0 ? excelAgents : createSampleAgents();
-    
-    await Agent.insertMany(agentsToSave);
-    agentsFromDB = agentsToSave;
-    console.log(`Saved ${agentsFromDB.length} agents to database`);
-  }
-
-  // Load Products
-  let productsFromDB = await Product.find();
-  if (productsFromDB.length === 0) {
-    console.log('No products in database, attempting to load from sources');
-    
-    const csvProducts = await readOutputCsv();
-    const productsToSave = csvProducts.length > 0 ? csvProducts : createSampleProducts();
-    
-    await Product.insertMany(productsToSave);
-    productsFromDB = productsToSave;
-    console.log(`Saved ${productsFromDB.length} products to database`);
-  }
-}
-
-// API Routes
-app.get('/', (req, res) => {
-  res.json({ 
-    message: 'Product Assignment Server is running',
-    endpoints: [
-      '/api/agents',
-      '/api/products',
-      '/api/assignments'
-    ]
-  });
-});
-
-app.get('/api/agents', async (req, res) => {
-  try {
-    const agents = await Agent.find();
-    res.json(agents);
-  } catch (error) {
-    console.error('Error fetching agents:', error);
-    res.status(500).json({ error: 'Failed to fetch agents' });
-  }
-});
-
-app.get('/api/products', async (req, res) => {
-  try {
-    const products = await Product.find();
-    res.json(products);
-  } catch (error) {
-    console.error('Error fetching products:', error);
-    res.status(500).json({ error: 'Failed to fetch products' });
-  }
-});
-
-app.get('/api/assignments', async (req, res) => {
-  try {
-    const assignments = await Assignment.find();
-    res.json(assignments);
-  } catch (error) {
-    console.error('Error fetching assignments:', error);
-    res.status(500).json({ error: 'Failed to fetch assignments' });
-  }
-});
-
-// Error Handling Middleware
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ 
-    error: 'Something went wrong!',
-    details: err.message 
-  });
-});
-
-// Server Startup
-async function startServer() {
-  try {
-    // Connect to MongoDB
-    await connectDB();
-    
-    // Load initial data
-    await loadData();
-    
-    // Start Express server
-    app.listen(PORT, '0.0.0.0', () => {
-      console.log(`Server running on port ${PORT}`);
-      console.log(`Listening on all network interfaces`);
-    });
-  } catch (error) {
-    console.error('Server startup failed:', error);
-    process.exit(1);
-  }
-}
-
-// Initialize Server
-startServer();
-
-// Graceful Shutdown
-process.on('SIGINT', async () => {
-  console.log('Shutting down gracefully');
-  try {
-    await mongoose.connection.close();
-    process.exit(0);
-  } catch (error) {
-    console.error('Error during shutdown:', error);
-    process.exit(1);
-  }
-});
+export default App;
