@@ -22,38 +22,6 @@ const getApiBaseUrl = () => {
 
 const API_BASE_URL = getApiBaseUrl();
 
-// Error Boundary Component
-class ErrorBoundary extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = { hasError: false, error: null };
-  }
-
-  static getDerivedStateFromError(error) {
-    return { hasError: true, error };
-  }
-
-  componentDidCatch(error, errorInfo) {
-    console.error("Uncaught error:", error, errorInfo);
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div className="error-state">
-          <h2>Something Went Wrong</h2>
-          <p>{this.state.error.toString()}</p>
-          <button onClick={() => window.location.reload()} className="retry-button">
-            Reload Page
-          </button>
-        </div>
-      );
-    }
-
-    return this.props.children;
-  }
-}
-
 function App() {
   // Theme & Menu state
   const [darkMode, setDarkMode] = useState(false);
@@ -89,6 +57,11 @@ function App() {
     message: '',
     onConfirm: null,
   });
+
+  // Initial data loading
+  useEffect(() => {
+    loadDataFromServer();
+  }, []);
 
   // Data Loading Function
   const loadDataFromServer = useCallback(async () => {
@@ -173,42 +146,175 @@ function App() {
     }
   };
 
-  // Other methods from your original implementation would go here
-  // (requestTask, completeTask, etc.)
+  // Calculate agent workload
+  const getAgentWorkloadCount = (agentId) => {
+    const agentAssignments = assignments.filter(
+      (a) => a.agentId === agentId && !a.completed && !a.unassignedTime
+    );
+    let sum = 0;
+    agentAssignments.forEach((assign) => {
+      const product = products.find((p) => p.id === assign.productId);
+      const count = product && product.count ? parseInt(product.count, 10) : 1;
+      sum += count;
+    });
+    return sum;
+  };
 
-  // Render methods would also be included here
+  // Request Task
+  const requestTask = async (agentId) => {
+    const availableProducts = products.filter(p => !p.assigned);
+    if (availableProducts.length === 0) {
+      alert("No available products.");
+      return;
+    }
+
+    const now = new Date();
+    const productsWithSlaDiff = availableProducts.map(p => {
+      let slaHours = 24; // default SLA
+      if (p.priority === 'P1') {
+        slaHours = 2;
+      } else if (p.priority === 'P2') {
+        slaHours = 12;
+      } else if (p.priority === 'P3') {
+        slaHours = 24;
+      }
+      const slaMs = slaHours * 60 * 60 * 1000;
+      const created = new Date(p.createdOn);
+      const timePassed = now - created;
+      const diff = slaMs - timePassed;
+      return { ...p, slaDiff: diff };
+    });
+
+    const withinSla = productsWithSlaDiff.filter(p => p.slaDiff > 0);
+    let selectedProduct;
+    if (withinSla.length > 0) {
+      selectedProduct = withinSla.reduce((prev, curr) => (prev.slaDiff < curr.slaDiff ? prev : curr));
+    } else {
+      selectedProduct = productsWithSlaDiff.reduce((prev, curr) => (prev.slaDiff < curr.slaDiff ? prev : curr));
+    }
+
+    const workloadCount = getAgentWorkloadCount(agentId);
+    if (workloadCount >= 30) {
+      alert("Please complete or unassign some tasks before requesting new ones (max capacity = 30).");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await fetch(`${API_BASE_URL}/assign`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agentId, productId: selectedProduct.id }),
+      });
+      await loadDataFromServer();
+    } catch (error) {
+      console.error('Error requesting task:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Complete Task
+  const completeTask = async (agentId, productId) => {
+    setIsLoading(true);
+    try {
+      await fetch(`${API_BASE_URL}/complete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agentId, productId }),
+      });
+      await loadDataFromServer();
+    } catch (error) {
+      console.error('Error completing task:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Complete All Tasks for Agent
+  const completeAllTasksForAgent = async (agentId) => {
+    setIsLoading(true);
+    try {
+      await fetch(`${API_BASE_URL}/complete-all-agent`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agentId }),
+      });
+      await loadDataFromServer();
+    } catch (error) {
+      console.error('Error completing all tasks for agent:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Unassign Product
+  const unassignProduct = async (productId, agentId) => {
+    setIsLoading(true);
+    try {
+      await fetch(`${API_BASE_URL}/unassign-product`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productId, agentId }),
+      });
+      await loadDataFromServer();
+    } catch (error) {
+      console.error('Error unassigning product:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Unassign Agent Tasks
+  const unassignAgentTasks = async (agentId) => {
+    setIsLoading(true);
+    try {
+      await fetch(`${API_BASE_URL}/unassign-agent`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agentId }),
+      });
+      await loadDataFromServer();
+    } catch (error) {
+      console.error('Error unassigning agent tasks:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Render method (placeholder)
+  const renderDashboard = () => {
+    // Add your dashboard rendering logic here
+    return (
+      <div>
+        {/* Placeholder content */}
+        <h1>Dashboard</h1>
+      </div>
+    );
+  };
 
   // Main render
   return (
-    <ErrorBoundary>
-      <div className={`app ${darkMode ? 'dark-mode' : 'light-mode'}`}>
-        {/* Your existing header, side menu, and other render methods */}
-        <main className="app-content">
-          {error ? (
-            <div className="error-state">
-              <h2>Error Loading Data</h2>
-              <p>{error}</p>
-              <button onClick={loadDataFromServer} className="retry-button">
-                Retry Loading
-              </button>
-            </div>
-          ) : (
-            <>
-              {isLoading && (
-                <div className="loading-overlay">
-                  <div className="loading-content">
-                    <div className="spinner-large"></div>
-                    <p>{loadingMessage}</p>
-                  </div>
-                </div>
-              )}
-              {/* Placeholder for your existing dashboard rendering logic */}
-              {/* renderDashboard() would go here */}
-            </>
-          )}
-        </main>
-      </div>
-    </ErrorBoundary>
+    <div className={`app ${darkMode ? 'dark-mode' : 'light-mode'}`}>
+      {isLoading && (
+        <div className="loading-overlay">
+          <div className="loading-content">
+            <div className="spinner-large"></div>
+            <p>{loadingMessage}</p>
+          </div>
+        </div>
+      )}
+      {error && (
+        <div className="error-state">
+          <h2>Error Loading Data</h2>
+          <p>{error}</p>
+          <button onClick={loadDataFromServer} className="retry-button">
+            Retry Loading
+          </button>
+        </div>
+      )}
+      {renderDashboard()}
+    </div>
   );
 }
 
