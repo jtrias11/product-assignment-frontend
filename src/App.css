@@ -165,8 +165,6 @@ th {
 .back-btn {
   background-color: var(--secondary-color);
 }
-
-/* Refresh Button */
 .refresh-button {
   padding: 0.5rem 1rem;
   background-color: var(--primary-color);
@@ -209,7 +207,7 @@ th {
   100% { transform: rotate(360deg); }
 }
 
-/* Status Cards */
+/* Status Cards and Dashboard */
 .status-cards p {
   margin: 0.5rem 0;
 }
