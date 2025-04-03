@@ -2,6 +2,7 @@
   "name": "product-assignment-app",
   "version": "0.1.0",
   "private": true,
+  "proxy": "https://product-assignment-server.onrender.com",
   "dependencies": {
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.3",
@@ -23,13 +24,18 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "predeploy": "npm run build",
+    "deploy": "echo 'Deploying to Render...'"
   },
   "eslintConfig": {
     "extends": [
       "react-app",
       "react-app/jest"
-    ]
+    ],
+    "rules": {
+      "no-unused-vars": "warn"
+    }
   },
   "browserslist": {
     "production": [
@@ -45,5 +51,8 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss7-compat": "^2.2.17"
+  },
+  "env": {
+    "REACT_APP_API_BASE_URL": "https://product-assignment-server.onrender.com/api"
   }
 }

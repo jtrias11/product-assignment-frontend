@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import './App.css';
 
 // Helper function to format a date string to EST.
@@ -26,8 +26,8 @@ function App() {
   // Theme & Menu state
   const [darkMode, setDarkMode] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const toggleTheme = () => setDarkMode(prev => !prev);
-  const toggleMenu = () => setMenuOpen(prev => !prev);
+  const toggleTheme = useCallback(() => setDarkMode(prev => !prev), []);
+  const toggleMenu = useCallback(() => setMenuOpen(prev => !prev), []);
 
   // Data states
   const [agents, setAgents] = useState([]);
@@ -58,10 +58,13 @@ function App() {
     onConfirm: null,
   });
 
-  // Initial data loading
-  useEffect(() => {
-    loadDataFromServer();
-  }, []);
+  // Filtered and memoized data
+  const filteredAgents = useMemo(() => 
+    agents.filter(agent => 
+      agent.name.toLowerCase().includes(searchTerm.toLowerCase())
+    ), 
+    [agents, searchTerm]
+  );
 
   // Data Loading Function
   const loadDataFromServer = useCallback(async () => {
@@ -76,9 +79,9 @@ function App() {
         fetch(`${API_BASE_URL}/assignments`),
       ]);
 
-      if (!prodRes.ok) throw new Error(`Products fetch failed: ${prodRes.status}`);
-      if (!agentsRes.ok) throw new Error(`Agents fetch failed: ${agentsRes.status}`);
-      if (!assignRes.ok) throw new Error(`Assignments fetch failed: ${assignRes.status}`);
+      if (!prodRes.ok || !agentsRes.ok || !assignRes.ok) {
+        throw new Error('Failed to fetch data');
+      }
 
       const productsData = await prodRes.json();
       const agentsData = await agentsRes.json();
@@ -99,7 +102,7 @@ function App() {
   }, []);
 
   // Load previously assigned tasks
-  const loadPreviouslyAssigned = async () => {
+  const loadPreviouslyAssigned = useCallback(async () => {
     setIsLoading(true);
     try {
       const res = await fetch(`${API_BASE_URL}/previously-assigned`);
@@ -112,10 +115,10 @@ function App() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   // File Upload Handler
-  const handleFileUpload = async (event) => {
+  const handleFileUpload = useCallback(async (event) => {
     const file = event.target.files[0];
     if (!file) return;
     
@@ -144,154 +147,25 @@ function App() {
       setIsLoading(false);
       event.target.value = null;
     }
-  };
+  }, [loadDataFromServer]);
 
-  // Calculate agent workload
-  const getAgentWorkloadCount = (agentId) => {
-    const agentAssignments = assignments.filter(
-      (a) => a.agentId === agentId && !a.completed && !a.unassignedTime
-    );
-    let sum = 0;
-    agentAssignments.forEach((assign) => {
-      const product = products.find((p) => p.id === assign.productId);
-      const count = product && product.count ? parseInt(product.count, 10) : 1;
-      sum += count;
-    });
-    return sum;
-  };
+  // Initial data load
+  useEffect(() => {
+    loadDataFromServer();
+  }, [loadDataFromServer]);
 
-  // Request Task
-  const requestTask = async (agentId) => {
-    const availableProducts = products.filter(p => !p.assigned);
-    if (availableProducts.length === 0) {
-      alert("No available products.");
-      return;
-    }
-
-    const now = new Date();
-    const productsWithSlaDiff = availableProducts.map(p => {
-      let slaHours = 24; // default SLA
-      if (p.priority === 'P1') {
-        slaHours = 2;
-      } else if (p.priority === 'P2') {
-        slaHours = 12;
-      } else if (p.priority === 'P3') {
-        slaHours = 24;
-      }
-      const slaMs = slaHours * 60 * 60 * 1000;
-      const created = new Date(p.createdOn);
-      const timePassed = now - created;
-      const diff = slaMs - timePassed;
-      return { ...p, slaDiff: diff };
-    });
-
-    const withinSla = productsWithSlaDiff.filter(p => p.slaDiff > 0);
-    let selectedProduct;
-    if (withinSla.length > 0) {
-      selectedProduct = withinSla.reduce((prev, curr) => (prev.slaDiff < curr.slaDiff ? prev : curr));
-    } else {
-      selectedProduct = productsWithSlaDiff.reduce((prev, curr) => (prev.slaDiff < curr.slaDiff ? prev : curr));
-    }
-
-    const workloadCount = getAgentWorkloadCount(agentId);
-    if (workloadCount >= 30) {
-      alert("Please complete or unassign some tasks before requesting new ones (max capacity = 30).");
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      await fetch(`${API_BASE_URL}/assign`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agentId, productId: selectedProduct.id }),
-      });
-      await loadDataFromServer();
-    } catch (error) {
-      console.error('Error requesting task:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Complete Task
-  const completeTask = async (agentId, productId) => {
-    setIsLoading(true);
-    try {
-      await fetch(`${API_BASE_URL}/complete`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agentId, productId }),
-      });
-      await loadDataFromServer();
-    } catch (error) {
-      console.error('Error completing task:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Complete All Tasks for Agent
-  const completeAllTasksForAgent = async (agentId) => {
-    setIsLoading(true);
-    try {
-      await fetch(`${API_BASE_URL}/complete-all-agent`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agentId }),
-      });
-      await loadDataFromServer();
-    } catch (error) {
-      console.error('Error completing all tasks for agent:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Unassign Product
-  const unassignProduct = async (productId, agentId) => {
-    setIsLoading(true);
-    try {
-      await fetch(`${API_BASE_URL}/unassign-product`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productId, agentId }),
-      });
-      await loadDataFromServer();
-    } catch (error) {
-      console.error('Error unassigning product:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Unassign Agent Tasks
-  const unassignAgentTasks = async (agentId) => {
-    setIsLoading(true);
-    try {
-      await fetch(`${API_BASE_URL}/unassign-agent`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agentId }),
-      });
-      await loadDataFromServer();
-    } catch (error) {
-      console.error('Error unassigning agent tasks:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Render method (placeholder)
-  const renderDashboard = () => {
-    // Add your dashboard rendering logic here
-    return (
+  // Render main dashboard (placeholder)
+  const renderDashboard = () => (
+    <div>
+      <h1>Product Assignment Dashboard</h1>
       <div>
-        {/* Placeholder content */}
-        <h1>Dashboard</h1>
+        <h2>System Status</h2>
+        <p>Total Agents: {totalAgents}</p>
+        <p>Total Products: {totalProducts}</p>
+        <p>Total Assignments: {totalAssignments}</p>
       </div>
-    );
-  };
+    </div>
+  );
 
   // Main render
   return (
