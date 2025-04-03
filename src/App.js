@@ -101,6 +101,52 @@ function App() {
     return workloads;
   }, [products, memoizedAgentAssignments]);
 
+  // Memoized completed assignments
+  const completedAssignments = useMemo(() => {
+    return assignments.filter(a => a.completed);
+  }, [assignments]);
+
+  // Memoized grouped completed tasks
+  const groupedCompletedTasks = useMemo(() => {
+    const result = {};
+    const productMap = {};
+    const agentMap = {};
+    
+    // Build lookup maps
+    products.forEach(p => { productMap[p.id] = p; });
+    agents.forEach(a => { agentMap[a._id] = a; });
+    
+    completedAssignments.forEach(c => {
+      const key = c.productId;
+      if (!result[key]) {
+        const product = productMap[key];
+        result[key] = {
+          count: product && product.count ? parseInt(product.count, 10) : 1,
+          createdOn: product?.createdOn || 'N/A',
+          priority: product?.priority || 'N/A',
+          tenantId: product?.tenantId || 'N/A',
+          completedTime: c.completedOn || 'N/A',
+          agentNames: new Set(),
+        };
+      } else {
+        const product = productMap[key];
+        const additional = product && product.count ? parseInt(product.count, 10) : 1;
+        result[key].count += additional;
+      }
+      const agent = agentMap[c.agentId];
+      if (agent) {
+        result[key].agentNames.add(agent.name || 'Unknown');
+      }
+    });
+    
+    return result;
+  }, [completedAssignments, products, agents]);
+
+  // Memoized unassigned products
+  const unassignedProducts = useMemo(() => {
+    return products.filter(p => !p.assigned);
+  }, [products]);
+
   const getAgentWorkloadCount = useCallback((agentId) => {
     return agentWorkloads[agentId] || 0;
   }, [agentWorkloads]);
@@ -618,54 +664,13 @@ function App() {
   }, [agents, memoizedAgentAssignments, products, selectedAgent, getAgentWorkloadCount, isLoading, requestTask, unassignAgentTasks, completeAllTasksForAgent, completeTask, unassignProduct]);
 
   const renderCompletedTasks = useCallback(() => {
-    // Use memoization for expensive filtering and grouping operations
-    const completed = useMemo(() => {
-      return assignments.filter(a => a.completed);
-    }, [assignments]);
-    
-    // Group completed tasks by product ID and sum counts
-    const grouped = useMemo(() => {
-      const result = {};
-      const productMap = {};
-      const agentMap = {};
-      
-      // Build lookup maps
-      products.forEach(p => { productMap[p.id] = p; });
-      agents.forEach(a => { agentMap[a._id] = a; });
-      
-      completed.forEach(c => {
-        const key = c.productId;
-        if (!result[key]) {
-          const product = productMap[key];
-          result[key] = {
-            count: product && product.count ? parseInt(product.count, 10) : 1,
-            createdOn: product?.createdOn || 'N/A',
-            priority: product?.priority || 'N/A',
-            tenantId: product?.tenantId || 'N/A',
-            completedTime: c.completedOn || 'N/A',
-            agentNames: new Set(),
-          };
-        } else {
-          const product = productMap[key];
-          const additional = product && product.count ? parseInt(product.count, 10) : 1;
-          result[key].count += additional;
-        }
-        const agent = agentMap[c.agentId];
-        if (agent) {
-          result[key].agentNames.add(agent.name || 'Unknown');
-        }
-      });
-      
-      return result;
-    }, [completed, products, agents]);
-    
     return (
       <div className="view-section">
         <h2>Completed Tasks</h2>
         <button className="download-completed-btn" onClick={downloadCompletedCSV}>
           Download Completed CSV
         </button>
-        {Object.keys(grouped).length === 0 ? (
+        {Object.keys(groupedCompletedTasks).length === 0 ? (
           <p>No completed tasks found.</p>
         ) : (
           <table className="assignments-table">
@@ -681,7 +686,7 @@ function App() {
               </tr>
             </thead>
             <tbody>
-              {Object.entries(grouped).map(([prodId, data]) => (
+              {Object.entries(groupedCompletedTasks).map(([prodId, data]) => (
                 <tr key={prodId}>
                   <td className="product-id">{prodId}</td>
                   <td>{Array.from(data.agentNames).join(', ')}</td>
@@ -700,18 +705,13 @@ function App() {
         </button>
       </div>
     );
-  }, [completed, products, agents, downloadCompletedCSV]);
+  }, [groupedCompletedTasks, downloadCompletedCSV]);
 
   const renderAvailableProducts = useCallback(() => {
-    // Use memoization for better performance
-    const unassigned = useMemo(() => {
-      return products.filter(p => !p.assigned);
-    }, [products]);
-    
     return (
       <div className="view-section">
         <h2>Available Products</h2>
-        {unassigned.length === 0 ? (
+        {unassignedProducts.length === 0 ? (
           <p>No available products found.</p>
         ) : (
           <table className="assignments-table">
@@ -725,7 +725,7 @@ function App() {
               </tr>
             </thead>
             <tbody>
-              {unassigned.map((p) => (
+              {unassignedProducts.map((p) => (
                 <tr key={p.id}>
                   <td className="product-id">{p.id}</td>
                   <td>{p.count || 1}</td>
@@ -742,7 +742,7 @@ function App() {
         </button>
       </div>
     );
-  }, [products]);
+  }, [unassignedProducts]);
 
   const renderPreviouslyAssigned = useCallback(() => (
     <div className="view-section">
