@@ -43,7 +43,7 @@ function App() {
     onConfirm: null,
   });
 
-  // Memoized filtered agents for the directory view
+  // Memoized filtered agents for the directory view (using _id)
   const filteredAgents = useMemo(() => {
     return agents.filter(agent =>
       agent.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -55,14 +55,14 @@ function App() {
     const workloads = {};
     agents.forEach(agent => {
       const agentAssignments = assignments.filter(
-        a => a.agentId === agent.id && !a.completed && !a.unassignedTime
+        a => a.agentId === agent._id && !a.completed && !a.unassignedTime
       );
       const sum = agentAssignments.reduce((total, assign) => {
         const product = products.find(p => p.id === assign.productId);
         const count = product && product.count ? parseInt(product.count, 10) : 1;
         return total + count;
       }, 0);
-      workloads[agent.id] = sum;
+      workloads[agent._id] = sum;
     });
     return workloads;
   }, [agents, assignments, products]);
@@ -100,14 +100,14 @@ function App() {
     }
   }, []);
 
-  // Load previously assigned tasks (for unassigned view)
+  // Load previously assigned tasks (for "unassigned" view)
   const loadPreviouslyAssigned = useCallback(async () => {
     setIsLoading(true);
     try {
       const res = await fetch(`${API_BASE_URL}/previously-assigned`);
       if (!res.ok) throw new Error('Failed to load unassigned tasks');
       const data = await res.json();
-      // Filtering tasks that have unassignedTime
+      // Only include tasks that have an unassignedTime value
       const filtered = data.filter(task => task.unassignedTime);
       setPreviouslyAssigned(filtered);
     } catch (error) {
@@ -180,7 +180,7 @@ function App() {
       const response = await fetch(`${API_BASE_URL}/assign`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agentId })
+        body: JSON.stringify({ agentId })  // agentId here is the _id (string)
       });
       if (!response.ok) {
         const errorData = await response.json();
@@ -446,14 +446,14 @@ function App() {
           </thead>
           <tbody>
             {filteredAgents.map((agent) => (
-              <tr key={agent.id}>
+              <tr key={agent._id}>
                 <td>{agent.name}</td>
                 <td>{agent.role}</td>
-                <td>{getAgentWorkloadCount(agent.id)}/30</td>
+                <td>{getAgentWorkloadCount(agent._id)}/30</td>
                 <td>
                   <button
                     className="view-dashboard-btn"
-                    onClick={() => { setSelectedAgent(agent.id); setView('agent-dashboard'); }}
+                    onClick={() => { setSelectedAgent(agent._id); setView('agent-dashboard'); }}
                   >
                     View Dashboard
                   </button>
@@ -467,21 +467,21 @@ function App() {
   ), [filteredAgents, getAgentWorkloadCount, totalAgents, totalProducts, totalAssignments, handleRefreshData, searchTerm]);
 
   const renderAgentDashboard = useCallback(() => {
-    const agent = agents.find(a => a.id === selectedAgent);
+    const agent = agents.find(a => a._id === selectedAgent);
     if (!agent) return <p>Agent not found.</p>;
-    const agentAssignments = assignments.filter(a => a.agentId === agent.id && !a.completed && !a.unassignedTime);
+    const agentAssignments = assignments.filter(a => a.agentId === agent._id && !a.completed && !a.unassignedTime);
     return (
       <div className="view-section">
         <h2>{agent.name} - Dashboard</h2>
-        <p>{agent.role} • {getAgentWorkloadCount(agent.id)}/30 tasks</p>
+        <p>{agent.role} • {getAgentWorkloadCount(agent._id)}/30 tasks</p>
         <div className="dashboard-actions">
-          <button className="request-task-btn" onClick={() => requestTask(agent.id)} disabled={isLoading}>
+          <button className="request-task-btn" onClick={() => requestTask(agent._id)} disabled={isLoading}>
             Request Task
           </button>
-          <button className="unassign-all-btn" onClick={() => unassignAgentTasks(agent.id)} disabled={isLoading || agentAssignments.length === 0}>
+          <button className="unassign-all-btn" onClick={() => unassignAgentTasks(agent._id)} disabled={isLoading || agentAssignments.length === 0}>
             Unassign Tasks
           </button>
-          <button className="complete-all-btn" onClick={() => completeAllTasksForAgent(agent.id)} disabled={isLoading || agentAssignments.length === 0}>
+          <button className="complete-all-btn" onClick={() => completeAllTasksForAgent(agent._id)} disabled={isLoading || agentAssignments.length === 0}>
             Complete All
           </button>
           <button
@@ -525,10 +525,10 @@ function App() {
                     <td>{assign.assignedOn || 'N/A'}</td>
                     <td>
                       <div className="action-buttons">
-                        <button className="complete-task-btn" onClick={() => completeTask(agent.id, assign.productId)} disabled={isLoading}>
+                        <button className="complete-task-btn" onClick={() => completeTask(agent._id, assign.productId)} disabled={isLoading}>
                           Complete
                         </button>
-                        <button className="unassign-task-btn" onClick={() => unassignProduct(assign.productId, agent.id)} disabled={isLoading}>
+                        <button className="unassign-task-btn" onClick={() => unassignProduct(assign.productId, agent._id)} disabled={isLoading}>
                           Unassign
                         </button>
                       </div>
@@ -567,7 +567,7 @@ function App() {
         const additional = product && product.count ? parseInt(product.count, 10) : 1;
         grouped[key].count += additional;
       }
-      const agent = agents.find(a => a.id === c.agentId);
+      const agent = agents.find(a => a._id === c.agentId);
       grouped[key].agentNames.add(agent ? agent.name : 'Unknown');
     });
     return (
