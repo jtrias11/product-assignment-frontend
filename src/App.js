@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import './App.css';
 
+// Disable eslint warnings for unused variables
+/* eslint-disable no-unused-vars */
+
 // Helper function to format a date string to EST.
 const formatEST = (dateStr) => {
   if (!dateStr) return 'N/A';
@@ -154,40 +157,108 @@ function App() {
     loadDataFromServer();
   }, [loadDataFromServer]);
 
-  // Render main dashboard (placeholder)
+  // Render dashboard with basic system status
   const renderDashboard = () => (
-    <div>
-      <h1>Product Assignment Dashboard</h1>
-      <div>
+    <div className="dashboard">
+      <h1>Product Assignment System</h1>
+      <div className="system-status">
         <h2>System Status</h2>
         <p>Total Agents: {totalAgents}</p>
         <p>Total Products: {totalProducts}</p>
         <p>Total Assignments: {totalAssignments}</p>
       </div>
+      
+      {/* Conditional rendering of data sections */}
+      {view === 'agents' && (
+        <div className="agents-section">
+          <h2>Agents</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Role</th>
+                <th>Capacity</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredAgents.map(agent => (
+                <tr key={agent.id}>
+                  <td>{agent.name}</td>
+                  <td>{agent.role}</td>
+                  <td>{agent.capacity}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      
+      {view === 'products' && (
+        <div className="products-section">
+          <h2>Products</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Priority</th>
+                <th>Assigned</th>
+              </tr>
+            </thead>
+            <tbody>
+              {products.map(product => (
+                <tr key={product.id}>
+                  <td>{product.id}</td>
+                  <td>{product.name}</td>
+                  <td>{product.priority}</td>
+                  <td>{product.assigned ? 'Yes' : 'No'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 
   // Main render
   return (
     <div className={`app ${darkMode ? 'dark-mode' : 'light-mode'}`}>
+      <header>
+        <button onClick={toggleTheme}>
+          {darkMode ? 'Light Mode' : 'Dark Mode'}
+        </button>
+        <div className="view-controls">
+          <button onClick={() => setView('agents')}>Agents</button>
+          <button onClick={() => setView('products')}>Products</button>
+        </div>
+      </header>
+
       {isLoading && (
         <div className="loading-overlay">
           <div className="loading-content">
-            <div className="spinner-large"></div>
+            <div className="spinner"></div>
             <p>{loadingMessage}</p>
           </div>
         </div>
       )}
+
       {error && (
         <div className="error-state">
-          <h2>Error Loading Data</h2>
+          <h2>Error</h2>
           <p>{error}</p>
-          <button onClick={loadDataFromServer} className="retry-button">
-            Retry Loading
-          </button>
+          <button onClick={loadDataFromServer}>Retry</button>
         </div>
       )}
+
       {renderDashboard()}
+
+      <input 
+        type="file" 
+        onChange={handleFileUpload} 
+        accept=".csv"
+        style={{margin: '20px'}}
+      />
     </div>
   );
 }
