@@ -50,7 +50,7 @@ body {
 }
 
 /* Header */
-header {
+.app-header {
   display: flex;
   align-items: center;
   padding: 1rem;
@@ -67,6 +67,10 @@ header {
   margin-right: 1rem;
 }
 
+.brand-title {
+  font-size: 1.5rem;
+}
+
 /* Side Menu */
 .side-menu {
   position: fixed;
@@ -74,31 +78,28 @@ header {
   left: -250px;
   width: 250px;
   height: 100%;
+  padding: 1rem;
   transition: left 0.3s ease;
   z-index: 1000;
-  padding: 1rem;
 }
 
 .side-menu.open {
   left: 0;
 }
 
-.side-menu .close-menu {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
+.close-menu-btn {
   background: none;
   border: none;
   font-size: 1.5rem;
   cursor: pointer;
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
 }
 
-.side-menu nav {
-  display: flex;
-  flex-direction: column;
-}
-
-.side-menu button {
+.side-menu-nav button {
+  display: block;
+  width: 100%;
   margin: 0.5rem 0;
   padding: 0.5rem;
   background-color: var(--primary-color);
@@ -107,62 +108,164 @@ header {
   cursor: pointer;
 }
 
+.theme-toggle-button {
+  margin-top: 1rem;
+  padding: 0.5rem;
+  background-color: var(--secondary-color);
+  border: none;
+  cursor: pointer;
+}
+
+/* Upload Section */
+.menu-upload-section {
+  margin-top: 1rem;
+  text-align: center;
+}
+
+.upload-icon {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.file-input {
+  display: none;
+}
+
 /* Main Content */
-main {
+.app-content {
   padding: 1rem;
+  margin-left: 0;
+  transition: margin-left 0.3s;
 }
 
-.view-container {
-  max-width: 1200px;
-  margin: 0 auto;
+@media (min-width: 768px) {
+  .app-content {
+    margin-left: 250px;
+  }
 }
 
-/* Tables */
-.data-table {
+/* Tables and Forms */
+table {
   width: 100%;
   border-collapse: collapse;
   margin-top: 1rem;
 }
 
-.data-table th, 
-.data-table td {
+th, td {
   border: 1px solid #ddd;
   padding: 0.5rem;
   text-align: left;
 }
 
-.data-table th {
+th {
   background-color: var(--primary-color);
   color: white;
 }
 
-/* Search Input */
-.search-input {
-  width: 100%;
+input[type="text"] {
+  width: 70%;
   padding: 0.5rem;
-  margin-bottom: 1rem;
+  margin-right: 0.5rem;
   border: 1px solid #ddd;
 }
 
-/* Action Buttons */
-.action-btn {
+.refresh-button {
+  padding: 0.5rem;
   background-color: var(--primary-color);
   color: white;
   border: none;
-  padding: 0.25rem 0.5rem;
   cursor: pointer;
 }
 
-/* Loading and Error States */
-.loading, .error {
-  text-align: center;
-  padding: 2rem;
+/* Agent Directory */
+.agent-list-section {
+  margin-top: 1rem;
 }
 
-/* Responsive Design */
-@media (max-width: 768px) {
-  .side-menu {
-    width: 100%;
-    max-width: 300px;
-  }
+.agents-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+}
+
+/* Dashboard Actions */
+.dashboard-actions {
+  margin: 1rem 0;
+}
+
+.dashboard-actions button {
+  margin-right: 0.5rem;
+  padding: 0.5rem 1rem;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+/* Loading and Overlay */
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(255,255,255,0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+}
+
+.spinner-large {
+  border: 8px solid #f3f3f3;
+  border-top: 8px solid var(--primary-color);
+  border-radius: 50%;
+  width: 60px;
+  height: 60px;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Confirm Dialog */
+.confirm-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 3000;
+}
+
+.confirm-dialog {
+  background-color: white;
+  padding: 1rem;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.confirm-buttons button {
+  margin: 0.5rem;
+  padding: 0.5rem 1rem;
+  border: none;
+  cursor: pointer;
+}
+
+.cancel-button {
+  background-color: #ccc;
+}
+
+.confirm-button {
+  background-color: var(--primary-color);
+  color: white;
 }
