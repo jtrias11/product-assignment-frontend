@@ -31,11 +31,17 @@ function App() {
   const [searchTerm, setSearchTerm] = useState('');
 
   // View and Agent selection state
-  // Views: "agents", "completed", "available", "queue", "unassigned", "agent-dashboard"
   const [view, setView] = useState('agents');
   const [selectedAgent, setSelectedAgent] = useState(null);
 
-  // Confirmation dialog state (if needed)
+  // Progressive loading state
+  const [loadStages, setLoadStages] = useState({
+    agentsLoaded: false,
+    productsLoaded: false,
+    assignmentsLoaded: false
+  });
+
+  // Confirmation dialog state
   const [confirmDialog, setConfirmDialog] = useState({
     show: false,
     title: '',
@@ -43,29 +49,57 @@ function App() {
     onConfirm: null,
   });
 
-  // Memoized filtered agents for the directory view (using _id)
+  // Memoized filtered agents for the directory view
   const filteredAgents = useMemo(() => {
     return agents.filter(agent =>
       agent.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [agents, searchTerm]);
 
+  // Memoized agent assignments
+  const memoizedAgentAssignments = useMemo(() => {
+    const assignmentMap = {};
+    
+    agents.forEach(agent => {
+      assignmentMap[agent._id] = [];
+    });
+    
+    assignments.forEach(assignment => {
+      if (
+        assignment.agentId && 
+        !assignment.completed && 
+        !assignment.unassignedTime &&
+        assignmentMap[assignment.agentId]
+      ) {
+        assignmentMap[assignment.agentId].push(assignment);
+      }
+    });
+    
+    return assignmentMap;
+  }, [agents, assignments]);
+
   // Memoized workload per agent
   const agentWorkloads = useMemo(() => {
     const workloads = {};
-    agents.forEach(agent => {
-      const agentAssignments = assignments.filter(
-        a => a.agentId === agent._id && !a.completed && !a.unassignedTime
-      );
+    const productMap = {};
+    
+    // Create a product lookup map
+    products.forEach(product => {
+      productMap[product.id] = product;
+    });
+    
+    // Calculate workloads using the map
+    Object.entries(memoizedAgentAssignments).forEach(([agentId, agentAssignments]) => {
       const sum = agentAssignments.reduce((total, assign) => {
-        const product = products.find(p => p.id === assign.productId);
+        const product = productMap[assign.productId];
         const count = product && product.count ? parseInt(product.count, 10) : 1;
         return total + count;
       }, 0);
-      workloads[agent._id] = sum;
+      workloads[agentId] = sum;
     });
+    
     return workloads;
-  }, [agents, assignments, products]);
+  }, [products, memoizedAgentAssignments]);
 
   const getAgentWorkloadCount = useCallback((agentId) => {
     return agentWorkloads[agentId] || 0;
@@ -76,25 +110,63 @@ function App() {
     setIsLoading(true);
     setLoadingMessage('Loading data from server...');
     try {
-      const [prodRes, agentsRes, assignRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/products`),
-        fetch(`${API_BASE_URL}/agents`),
-        fetch(`${API_BASE_URL}/assignments`)
-      ]);
-      if (!prodRes.ok || !agentsRes.ok || !assignRes.ok) {
-        throw new Error('One or more fetch requests failed');
+      // Use the new combined endpoint for faster loading
+      const dashboardRes = await fetch(`${API_BASE_URL}/dashboard-data`);
+      
+      if (!dashboardRes.ok) {
+        throw new Error('Failed to fetch dashboard data');
       }
-      const productsData = await prodRes.json();
-      const agentsData = await agentsRes.json();
-      const assignmentsData = await assignRes.json();
-      setProducts(productsData);
-      setAgents(agentsData);
-      setAssignments(assignmentsData);
-      setTotalAgents(agentsData.length);
-      setTotalProducts(productsData.length);
-      setTotalAssignments(assignmentsData.length);
+      
+      const dashboardData = await dashboardRes.json();
+      
+      setProducts(dashboardData.products);
+      setAgents(dashboardData.agents);
+      setAssignments(dashboardData.assignments);
+      setTotalAgents(dashboardData.totalAgents);
+      setTotalProducts(dashboardData.totalProducts);
+      setTotalAssignments(dashboardData.totalAssignments);
+      
+      // Mark progressive loading stages
+      setLoadStages({
+        agentsLoaded: true,
+        productsLoaded: true,
+        assignmentsLoaded: true
+      });
     } catch (error) {
       console.error('Error loading data:', error);
+      
+      // Fallback to individual endpoints if combined endpoint fails
+      try {
+        const [prodRes, agentsRes, assignRes] = await Promise.all([
+          fetch(`${API_BASE_URL}/products`),
+          fetch(`${API_BASE_URL}/agents`),
+          fetch(`${API_BASE_URL}/assignments`)
+        ]);
+        
+        if (!prodRes.ok || !agentsRes.ok || !assignRes.ok) {
+          throw new Error('One or more fetch requests failed');
+        }
+        
+        const productsData = await prodRes.json();
+        const agentsData = await agentsRes.json();
+        const assignmentsData = await assignRes.json();
+        
+        setProducts(productsData);
+        setAgents(agentsData);
+        setAssignments(assignmentsData);
+        setTotalAgents(agentsData.length);
+        setTotalProducts(productsData.length);
+        setTotalAssignments(assignmentsData.length);
+        
+        // Mark progressive loading stages
+        setLoadStages({
+          agentsLoaded: true,
+          productsLoaded: true,
+          assignmentsLoaded: true
+        });
+      } catch (fallbackError) {
+        console.error('Fallback loading failed:', fallbackError);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -107,9 +179,7 @@ function App() {
       const res = await fetch(`${API_BASE_URL}/previously-assigned`);
       if (!res.ok) throw new Error('Failed to load unassigned tasks');
       const data = await res.json();
-      // Only include tasks that have an unassignedTime value
-      const filtered = data.filter(task => task.unassignedTime);
-      setPreviouslyAssigned(filtered);
+      setPreviouslyAssigned(data);
     } catch (error) {
       console.error('Error loading unassigned tasks:', error);
     } finally {
@@ -167,7 +237,6 @@ function App() {
     }
   }, [loadDataFromServer]);
 
-  // -------------------- Action Functions --------------------
   // Request Task: assigns an available product to the agent if capacity allows
   const requestTask = useCallback(async (agentId) => {
     const workloadCount = getAgentWorkloadCount(agentId);
@@ -180,7 +249,7 @@ function App() {
       const response = await fetch(`${API_BASE_URL}/assign`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agentId })  // agentId here is the _id (string)
+        body: JSON.stringify({ agentId })
       });
       if (!response.ok) {
         const errorData = await response.json();
@@ -283,11 +352,12 @@ function App() {
   const downloadCompletedCSV = useCallback(() => {
     window.open(`${API_BASE_URL}/download/completed-assignments`, '_blank');
   }, []);
+  
   const downloadUnassignedCSV = useCallback(() => {
     window.open(`${API_BASE_URL}/download/unassigned-products`, '_blank');
   }, []);
 
-  // -------------------- View Switching --------------------
+  // View Switching
   const handleViewChange = useCallback((newView) => {
     setSelectedAgent(null);
     if (newView === 'unassigned') {
@@ -297,7 +367,7 @@ function App() {
     setMenuOpen(false);
   }, [loadPreviouslyAssigned]);
 
-  // -------------------- Render Functions --------------------
+  // Render Functions
   const renderConfirmDialog = useCallback(() => {
     if (!confirmDialog.show) return null;
     return (
@@ -469,7 +539,8 @@ function App() {
   const renderAgentDashboard = useCallback(() => {
     const agent = agents.find(a => a._id === selectedAgent);
     if (!agent) return <p>Agent not found.</p>;
-    const agentAssignments = assignments.filter(a => a.agentId === agent._id && !a.completed && !a.unassignedTime);
+    const agentAssignments = memoizedAgentAssignments[agent._id] || [];
+    
     return (
       <div className="view-section">
         <h2>{agent.name} - Dashboard</h2>
@@ -516,7 +587,7 @@ function App() {
               {agentAssignments.map((assign) => {
                 const product = products.find(p => p.id === assign.productId);
                 return (
-                  <tr key={assign.id}>
+                  <tr key={assign._id}>
                     <td className="product-id">{assign.productId}</td>
                     <td>{product?.count || 1}</td>
                     <td>{product?.tenantId || 'N/A'}</td>
@@ -544,32 +615,50 @@ function App() {
         </button>
       </div>
     );
-  }, [agents, assignments, products, selectedAgent, getAgentWorkloadCount, isLoading, requestTask, unassignAgentTasks, completeAllTasksForAgent, completeTask, unassignProduct]);
+  }, [agents, memoizedAgentAssignments, products, selectedAgent, getAgentWorkloadCount, isLoading, requestTask, unassignAgentTasks, completeAllTasksForAgent, completeTask, unassignProduct]);
 
   const renderCompletedTasks = useCallback(() => {
-    const completed = assignments.filter(a => a.completed);
+    // Use memoization for expensive filtering and grouping operations
+    const completed = useMemo(() => {
+      return assignments.filter(a => a.completed);
+    }, [assignments]);
+    
     // Group completed tasks by product ID and sum counts
-    const grouped = {};
-    completed.forEach(c => {
-      const key = c.productId;
-      if (!grouped[key]) {
-        const product = products.find(p => p.id === key);
-        grouped[key] = {
-          count: product && product.count ? parseInt(product.count, 10) : 1,
-          createdOn: product?.createdOn || 'N/A',
-          priority: product?.priority || 'N/A',
-          tenantId: product?.tenantId || 'N/A',
-          completedTime: c.completedOn || 'N/A',
-          agentNames: new Set(),
-        };
-      } else {
-        const product = products.find(p => p.id === key);
-        const additional = product && product.count ? parseInt(product.count, 10) : 1;
-        grouped[key].count += additional;
-      }
-      const agent = agents.find(a => a._id === c.agentId);
-      grouped[key].agentNames.add(agent ? agent.name : 'Unknown');
-    });
+    const grouped = useMemo(() => {
+      const result = {};
+      const productMap = {};
+      const agentMap = {};
+      
+      // Build lookup maps
+      products.forEach(p => { productMap[p.id] = p; });
+      agents.forEach(a => { agentMap[a._id] = a; });
+      
+      completed.forEach(c => {
+        const key = c.productId;
+        if (!result[key]) {
+          const product = productMap[key];
+          result[key] = {
+            count: product && product.count ? parseInt(product.count, 10) : 1,
+            createdOn: product?.createdOn || 'N/A',
+            priority: product?.priority || 'N/A',
+            tenantId: product?.tenantId || 'N/A',
+            completedTime: c.completedOn || 'N/A',
+            agentNames: new Set(),
+          };
+        } else {
+          const product = productMap[key];
+          const additional = product && product.count ? parseInt(product.count, 10) : 1;
+          result[key].count += additional;
+        }
+        const agent = agentMap[c.agentId];
+        if (agent) {
+          result[key].agentNames.add(agent.name || 'Unknown');
+        }
+      });
+      
+      return result;
+    }, [completed, products, agents]);
+    
     return (
       <div className="view-section">
         <h2>Completed Tasks</h2>
@@ -611,10 +700,14 @@ function App() {
         </button>
       </div>
     );
-  }, [assignments, products, agents, downloadCompletedCSV]);
+  }, [completed, products, agents, downloadCompletedCSV]);
 
   const renderAvailableProducts = useCallback(() => {
-    const unassigned = products.filter(p => !p.assigned);
+    // Use memoization for better performance
+    const unassigned = useMemo(() => {
+      return products.filter(p => !p.assigned);
+    }, [products]);
+    
     return (
       <div className="view-section">
         <h2>Available Products</h2>
@@ -693,14 +786,42 @@ function App() {
     </div>
   ), [previouslyAssigned, downloadUnassignedCSV]);
 
-  const renderDashboard = useCallback(() => {
-    if (view === 'completed') return renderCompletedTasks();
-    if (view === 'available') return renderAvailableProducts();
-    if (view === 'queue') return renderQueue();
-    if (view === 'unassigned') return renderPreviouslyAssigned();
-    if (view === 'agent-dashboard' && selectedAgent) return renderAgentDashboard();
-    return renderAgentDirectory();
-  }, [view, selectedAgent, renderCompletedTasks, renderAvailableProducts, renderQueue, renderPreviouslyAssigned, renderAgentDashboard, renderAgentDirectory]);
+  // Progressive rendering based on loading stages
+  const renderProgressiveUI = useCallback(() => {
+    if (!loadStages.agentsLoaded && !loadStages.productsLoaded) {
+      // Show minimal UI while loading
+      return (
+        <div className="loading-content">
+          <h2>Loading application data...</h2>
+        </div>
+      );
+    }
+    
+    // Show loaded views as soon as needed data is available
+    if (view === 'completed' && loadStages.assignmentsLoaded) return renderCompletedTasks();
+    if (view === 'available' && loadStages.productsLoaded) return renderAvailableProducts();
+    if (view === 'queue' && loadStages.productsLoaded) return renderQueue();
+    if (view === 'unassigned' && loadStages.assignmentsLoaded) return renderPreviouslyAssigned();
+    if (view === 'agent-dashboard' && selectedAgent && loadStages.assignmentsLoaded) return renderAgentDashboard();
+    if (loadStages.agentsLoaded) return renderAgentDirectory();
+    
+    // Fallback to loading indicator
+    return (
+      <div className="loading-content">
+        <h2>Loading view data...</h2>
+      </div>
+    );
+  }, [
+    view, 
+    selectedAgent, 
+    loadStages,
+    renderCompletedTasks, 
+    renderAvailableProducts, 
+    renderQueue, 
+    renderPreviouslyAssigned, 
+    renderAgentDashboard, 
+    renderAgentDirectory
+  ]);
 
   return (
     <div className={`app ${darkMode ? 'dark-mode' : 'light-mode'}`}>
@@ -715,7 +836,7 @@ function App() {
             </div>
           </div>
         )}
-        {renderDashboard()}
+        {renderProgressiveUI()}
         {renderConfirmDialog()}
       </main>
     </div>
